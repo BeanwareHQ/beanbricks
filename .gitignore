@@ -1,2 +1,4 @@
+*.tar.gz
+brickout/
 brickout
 *.o
