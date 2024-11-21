@@ -34,4 +34,4 @@ typedef enum {
 
 #define BALL_RADIUS 10 // Ball Radius
 
-#define THEME CTP_MOCHA // Theme (choose options above)
+#define THEME THEME_DEFAULT // Theme (choose options above)
