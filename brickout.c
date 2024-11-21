@@ -17,6 +17,8 @@
 
 #include "settings.h"
 
+#define VERSION "0.1.0-pre"
+
 // color is a hex code, rgb
 inline Color color(int color) {
     // copied from somewhere
@@ -116,28 +118,31 @@ typedef struct {
 typedef enum {
     SCR_GAME = 0,
     SCR_DEAD = 1,
-    SCR_WON = 2,
+    SCR_WIN = 2,
+    SCR_TITLE = 3,
+    SCR_SETTINGS = 4,
 } Screen;
 
 typedef struct {
     Paddle paddle;
     Ball ball;
+    Screen screen;
     int score;
-    bool dead;
+    int paddle_speed;
+    bool paused;
     Brick bricks[LAYERS][NUM_BRICKS];
 } State;
 
 static int maxscore;
 void reset_state(State* s);
 
-int make_bounce_offset(const Ball* ball) {
-    double avg = (double)(ball->xspd + ball->yspd) / 2;
-    double max = fabs(avg) / 2;
+int get_bounce_offset(const Ball* ball) {
+    double avg =
+        (double)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd));
+    double max = fabs(avg) / 5;
     double min = -max;
     double base = (double)rand() / (double)(RAND_MAX);
     double result = min + base * (max - min);
-
-    // printf("bounce offset: %lf\n", result);
 
     return result + 0.5;
 }
@@ -158,7 +163,7 @@ void make_bricks(State* s) {
     }
 }
 
-void draw_bricks(State* s) {
+void draw_game_bricks(State* s) {
     for (int y = 0; y < LAYERS; y++) {
         for (int x = 0; x < NUM_BRICKS; x++) {
             Brick* b = &s->bricks[y][x];
@@ -170,185 +175,369 @@ void draw_bricks(State* s) {
     }
 }
 
-void draw(State* s) {
-    if (s->dead) {
-        const char* death_txt = "Game over!";
-        const char* reset_txt = "Press <r> to restart";
-        const int death_txtsz = 100;
-        const int reset_txtsz = 20;
+void draw_game_score(State* s) {
+    char txt[20] = {0};
+    snprintf(txt, 20, "Score: %d/%d", s->score, maxscore);
+    DrawText(txt, 20, 20, 20, color(TXT_PRIMARY_COLOR));
+}
 
-        int death_width = MeasureText(death_txt, death_txtsz);
-        int reset_width = MeasureText(reset_txt, reset_txtsz);
+void draw_game(State* s) {
+    if (s->paused) {
+        Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
+        DrawRectangleRec(darken, (Color){100, 100, 100, 100});
 
-        int death_posx = (WINWIDTH / 2) - death_width / 2;
-        int death_posy = (WINHEIGHT / 2) - death_txtsz;
-        int reset_posx = (WINWIDTH / 2) - reset_width / 2;
+        const char* pause = "paused";
+        const int pause_txtsz = 80;
+        int pause_width = MeasureText(pause, pause_txtsz);
+        int pause_posx = (WINWIDTH / 2) - pause_width / 2;
+        int pause_posy = (WINHEIGHT / 2) - pause_txtsz / 2;
 
-        DrawText(death_txt, death_posx, death_posy, death_txtsz,
+        DrawText(pause, pause_posx, pause_posy, pause_txtsz,
                  color(TXT_PRIMARY_COLOR));
-        DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
-                 color(TXT_SECONDARY_COLOR));
-    } else {
-        DrawRectangleRec(s->paddle.rec, s->paddle.color);
-        draw_bricks(s);
-        DrawCircle(s->ball.x, s->ball.y, BALL_RADIUS, color(BALL_COLOR));
+    }
 
-        char txt[10] = {0};
-        snprintf(txt, 10, "Score: %d", s->score);
-        DrawText(txt, 20, 20, 20, color(TXT_PRIMARY_COLOR));
+    DrawRectangleRec(s->paddle.rec, s->paddle.color);
+    DrawCircle(s->ball.x, s->ball.y, BALL_RADIUS, color(BALL_COLOR));
+    draw_game_bricks(s);
+    draw_game_score(s);
+}
+
+void draw_dead(State* s) {
+    const char* death_txt = "Game over!";
+    const char* reset_txt = "Press <r> to restart";
+    const int death_txtsz = 100;
+    const int reset_txtsz = 20;
+
+    int death_width = MeasureText(death_txt, death_txtsz);
+    int reset_width = MeasureText(reset_txt, reset_txtsz);
+
+    int death_posx = (WINWIDTH / 2) - death_width / 2;
+    int death_posy = (WINHEIGHT / 2) - death_txtsz;
+    int reset_posx = (WINWIDTH / 2) - reset_width / 2;
+
+    DrawText(death_txt, death_posx, death_posy, death_txtsz,
+             color(TXT_PRIMARY_COLOR));
+    DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
+             color(TXT_SECONDARY_COLOR));
+    draw_game_score(s);
+}
+
+void draw_win(State* s) {
+    const char* win_txt = "You won!";
+    const char* reset_txt = "Press <r> to restart";
+    const int win_txtsz = 100;
+    const int reset_txtsz = 20;
+
+    int win_width = MeasureText(win_txt, win_txtsz);
+    int reset_width = MeasureText(reset_txt, reset_txtsz);
+
+    int win_posx = (WINWIDTH / 2) - win_width / 2;
+    int win_posy = (WINHEIGHT / 2) - win_txtsz;
+    int reset_posx = (WINWIDTH / 2) - reset_width / 2;
+
+    DrawText(win_txt, win_posx, win_posy, win_txtsz, color(TXT_PRIMARY_COLOR));
+    DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
+             color(TXT_SECONDARY_COLOR));
+    draw_game_score(s);
+}
+
+void draw_title(State* s) {
+    const char* title = "Brick-out";
+    const int title_txtsz = 120;
+    int title_width = MeasureText(title, title_txtsz);
+    int title_posx = (WINWIDTH / 2) - title_width / 2;
+    int title_posy = (WINHEIGHT / 2) - title_txtsz / 2;
+
+    const char* begin = "press any key to begin";
+    const int begin_txtsz = 20;
+    int begin_width = MeasureText(begin, begin_txtsz);
+    int begin_posx = (WINWIDTH / 2) - begin_width / 2;
+    int begin_posy = WINHEIGHT - begin_txtsz - 20;
+
+    DrawText(title, title_posx, title_posy, title_txtsz,
+             color(TXT_PRIMARY_COLOR));
+    DrawText(begin, begin_posx, begin_posy, begin_txtsz,
+             color(TXT_SECONDARY_COLOR));
+}
+
+void draw_settings(State* s) { return draw_dead(s); }
+
+void draw(State* s) {
+    switch (s->screen) {
+        case SCR_GAME: {
+            draw_game(s);
+        } break;
+        case SCR_DEAD: {
+            draw_dead(s);
+        } break;
+        case SCR_WIN: {
+            draw_win(s);
+        } break;
+        case SCR_TITLE: {
+            draw_title(s);
+        } break;
+        case SCR_SETTINGS: {
+            draw_settings(s);
+        } break;
     }
 }
 
+void update_game_paddle(State* s) {
+    Paddle* paddle = &s->paddle;
+    Ball* ball = &s->ball;
+    Vector2 ball_pos = (Vector2){ball->x, ball->y};
+
+    // paddle update logic
+    if (IsKeyDown(KEY_LEFT)) {
+        if (paddle->rec.x - s->paddle_speed >= 0) {
+            paddle->rec.x -= s->paddle_speed;
+        } else {
+            paddle->rec.x = 0;
+        }
+    } else if (IsKeyDown(KEY_RIGHT)) {
+        if (paddle->rec.x + s->paddle_speed <= WINWIDTH - PADDLE_WIDTH) {
+            paddle->rec.x += s->paddle_speed;
+        } else {
+            paddle->rec.x = WINWIDTH - PADDLE_WIDTH;
+        }
+    }
+
+    bool ball_between_paddle_x =
+        ball->x > paddle->rec.x && ball->x < paddle->rec.x + paddle->rec.width;
+    bool ball_between_paddle_y =
+        ball->y < paddle->rec.y && ball->y > paddle->rec.y + paddle->rec.height;
+
+    if (CheckCollisionCircleRec(ball_pos, BALL_RADIUS, paddle->rec)) {
+        ball->y = paddle->rec.y - BALL_RADIUS;
+        ball->yspd = -ball->yspd;
+        if (ball->yspd < 0) {
+            ball->yspd -= get_bounce_offset(ball);
+        } else {
+            ball->yspd += get_bounce_offset(ball);
+        }
+
+        bool ball_and_paddle_direction_opposite =
+            ball->xspd < 0 && IsKeyDown(KEY_RIGHT) ||
+            ball->xspd > 0 && IsKeyDown(KEY_LEFT);
+
+        if (ball_and_paddle_direction_opposite) {
+            ball->xspd = -ball->xspd;
+
+            if (ball->xspd < 0) {
+                ball->xspd -= get_bounce_offset(ball);
+                ball->xspd -= 0.15;
+                ball->yspd -= 0.1;
+            } else {
+                ball->xspd += get_bounce_offset(ball);
+                ball->xspd += 0.15;
+                ball->yspd += 0.1;
+            }
+        } else {
+            if (ball->xspd < 0) {
+                ball->xspd -= 0.1;
+                ball->yspd -= 0.1;
+            } else {
+                ball->xspd += 0.1;
+                ball->yspd += 0.1;
+            }
+        }
+    }
+}
+
+void update_game_ball(State* s) {
+    Paddle* paddle = &s->paddle;
+    Ball* ball = &s->ball;
+    Vector2 ball_pos = (Vector2){ball->x, ball->y};
+
+    // ball update logic
+    if (ball->xspd > 0) {
+        if (ball->x + ball->xspd < WINWIDTH - BALL_RADIUS) {
+            s->ball.x += s->ball.xspd;
+        } else {
+            s->ball.x = WINWIDTH - BALL_RADIUS;
+            s->ball.xspd = -s->ball.xspd + get_bounce_offset(ball);
+
+            if (ball->xspd < 0) {
+                ball->xspd -= 0.05;
+                ball->yspd -= 0.05;
+            } else {
+                ball->xspd += 0.05;
+                ball->yspd += 0.05;
+            }
+        }
+    } else if (ball->xspd < 0) {
+        if (ball->x + ball->xspd > BALL_RADIUS) {
+            s->ball.x += s->ball.xspd;
+        } else {
+            s->ball.x = BALL_RADIUS;
+            s->ball.xspd = -s->ball.xspd + get_bounce_offset(ball);
+
+            if (ball->xspd < 0) {
+                ball->xspd -= 0.05;
+                ball->yspd -= 0.05;
+            } else {
+                ball->xspd += 0.05;
+                ball->yspd += 0.05;
+            }
+        }
+    }
+
+    if (ball->yspd > 0) {
+        if (ball->y + ball->yspd < WINHEIGHT - BALL_RADIUS) {
+            s->ball.y += s->ball.yspd;
+        } else {
+            s->ball.y = WINHEIGHT - BALL_RADIUS;
+            s->ball.yspd = -s->ball.yspd + get_bounce_offset(ball);
+        }
+    } else if (ball->yspd < 0) {
+        if (ball->y + ball->yspd > 0) {
+            s->ball.y += s->ball.yspd;
+        } else {
+            s->ball.y = 0;
+            s->ball.yspd = -s->ball.yspd + get_bounce_offset(ball);
+        }
+    }
+}
+
+void update_game_bricks(State* s) {
+    Paddle* paddle = &s->paddle;
+    Ball* ball = &s->ball;
+    Vector2 ball_pos = (Vector2){ball->x, ball->y};
+
+    for (int y = 0; y < LAYERS; y++) {
+        for (int x = 0; x < NUM_BRICKS; x++) {
+            Brick* brick = &s->bricks[y][x];
+
+            if (!brick->active) {
+                continue;
+            }
+
+            if (CheckCollisionCircleRec(ball_pos, BALL_RADIUS, brick->rec)) {
+                brick->active = false;
+
+                bool ball_between_brick_x =
+                    ball_pos.x + BALL_RADIUS > brick->rec.x &&
+                    ball_pos.x - BALL_RADIUS < brick->rec.x + brick->rec.width;
+                bool ball_between_brick_y =
+                    ball_pos.y + BALL_RADIUS < brick->rec.y &&
+                    ball_pos.y - BALL_RADIUS > brick->rec.y + brick->rec.height;
+
+                // ball above or below
+                if (ball_between_brick_x) {
+                    if (ball->y + BALL_RADIUS < brick->rec.y) {
+                        ball->y = brick->rec.y - BALL_RADIUS;
+                    } else if (ball->y - BALL_RADIUS <
+                               brick->rec.y + brick->rec.height) {
+                        ball->y =
+                            brick->rec.y + brick->rec.height + BALL_RADIUS;
+                    }
+
+                    ball->yspd = -ball->yspd;
+                    ball->y += ball->yspd;
+                }
+
+                // ball left or right
+                if (ball_between_brick_y) {
+                    if (ball->x + BALL_RADIUS < brick->rec.x) {
+                        ball->x = brick->rec.x - BALL_RADIUS;
+                    } else if (ball->x - BALL_RADIUS >
+                               brick->rec.x + brick->rec.width) {
+                        ball->x = brick->rec.x + brick->rec.width + BALL_RADIUS;
+                    }
+
+                    const int half_height = brick->rec.height / 2;
+                    const int middle = brick->rec.y + half_height;
+
+                    if (ball->y <= middle) {
+                        ball->y =
+                            brick->rec.y + brick->rec.height + BALL_RADIUS;
+                    } else {
+                        ball->y = brick->rec.y - BALL_RADIUS;
+                    }
+
+                    ball->xspd = -ball->xspd;
+                    ball->x += ball->xspd;
+                }
+
+                s->score += brick->value;
+            }
+        }
+    }
+}
+
+void update_dead(State* s) {
+    if (IsKeyPressed(KEY_R)) {
+        reset_state(s);
+        s->screen = SCR_GAME;
+    }
+}
+
+void update_game(State* s) {
+    Paddle* paddle = &s->paddle;
+    Ball* ball = &s->ball;
+
+    // funny raylib CheckCollisionCircleRec shit
+    Vector2 ball_pos = (Vector2){ball->x, ball->y};
+
+    double paddle_speed_offset =
+        (double)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd)) / 5;
+    s->paddle_speed = INITIAL_PADDLE_SPEED + paddle_speed_offset;
+
+    if (ball->y + BALL_RADIUS > paddle->rec.y + paddle->rec.height) {
+        s->screen = SCR_DEAD;
+        return;
+    }
+
+    if (s->score >= maxscore) {
+        s->screen = SCR_WIN;
+        return;
+    }
+
+    if (IsKeyPressed(KEY_K)) {
+        s->screen = SCR_DEAD;
+        return;
+    }
+
+    if (IsKeyPressed(KEY_SPACE)) {
+        s->paused = !s->paused;
+    }
+
+    if (s->paused) {
+        return;
+    }
+
+    update_game_paddle(s);
+    update_game_ball(s);
+    update_game_bricks(s);
+}
+
+void update_title(State* s) {
+    if (GetCharPressed() != 0) {
+        reset_state(s);
+        s->screen = SCR_GAME;
+    }
+}
+
+void update_win(State* s) { return update_dead(s); }
+void update_settings(State* s) { return update_dead(s); }
+
 void update(State* s) {
-    if (s->dead) {
-        if (IsKeyPressed(KEY_R)) {
-            s->dead = false;
-            reset_state(s);
-        }
-    } else {
-        Paddle* paddle = &s->paddle;
-        Ball* ball = &s->ball;
-
-        // funny raylib CheckCollisionCircleRec shit
-        Vector2 ball_pos = (Vector2){ball->x, ball->y};
-
-        if (ball->y + BALL_RADIUS > paddle->rec.y + paddle->rec.height) {
-            s->dead = true;
-            return;
-        }
-
-        if (s->score >= maxscore) {
-            s->dead = true;
-            return;
-        }
-
-        // paddle update logic
-        if (IsKeyDown(KEY_LEFT)) {
-            if (paddle->rec.x - PADDLE_SPEED >= 0) {
-                paddle->rec.x -= PADDLE_SPEED;
-            } else {
-                paddle->rec.x = 0;
-            }
-        } else if (IsKeyDown(KEY_RIGHT)) {
-            if (paddle->rec.x + PADDLE_SPEED <= WINWIDTH - PADDLE_WIDTH) {
-                paddle->rec.x += PADDLE_SPEED;
-            } else {
-                paddle->rec.x = WINWIDTH - PADDLE_WIDTH;
-            }
-        }
-
-        bool ball_between_paddle_x =
-            ball->x > paddle->rec.x &&
-            ball->x < paddle->rec.x + paddle->rec.width;
-        bool ball_between_paddle_y =
-            ball->y < paddle->rec.y &&
-            ball->y > paddle->rec.y + paddle->rec.height;
-
-        if (CheckCollisionCircleRec(ball_pos, BALL_RADIUS, paddle->rec)) {
-            ball->y = paddle->rec.y - BALL_RADIUS;
-            ball->yspd = -ball->yspd;
-            if (ball->yspd < 0) {
-                ball->yspd -= make_bounce_offset(ball);
-            } else {
-                ball->yspd += make_bounce_offset(ball);
-            }
-
-            bool ball_and_paddle_direction_opposite =
-                ball->xspd < 0 && IsKeyDown(KEY_RIGHT) ||
-                ball->xspd > 0 && IsKeyDown(KEY_LEFT);
-
-            if (ball_and_paddle_direction_opposite) {
-                ball->xspd = -ball->xspd;
-
-                if (ball->xspd < 0) {
-                    ball->xspd -= make_bounce_offset(ball);
-                } else {
-                    ball->xspd += make_bounce_offset(ball);
-                }
-            }
-        }
-
-        // ball update logic
-        if (ball->xspd > 0) {
-            if (ball->x + ball->xspd < WINWIDTH - BALL_RADIUS) {
-                s->ball.x += s->ball.xspd;
-            } else {
-                s->ball.x = WINWIDTH - BALL_RADIUS;
-                s->ball.xspd = -s->ball.xspd + make_bounce_offset(ball);
-            }
-        } else if (ball->xspd < 0) {
-            if (ball->x + ball->xspd > 0) {
-                s->ball.x += s->ball.xspd;
-            } else {
-                s->ball.x = 0;
-                s->ball.xspd = -s->ball.xspd + make_bounce_offset(ball);
-            }
-        }
-
-        if (ball->yspd > 0) {
-            if (ball->y + ball->yspd < WINHEIGHT - BALL_RADIUS) {
-                s->ball.y += s->ball.yspd;
-            } else {
-                s->ball.y = WINHEIGHT - BALL_RADIUS;
-                s->ball.yspd = -s->ball.yspd + make_bounce_offset(ball);
-            }
-        } else if (ball->yspd < 0) {
-            if (ball->y + ball->yspd > 0) {
-                s->ball.y += s->ball.yspd;
-            } else {
-                s->ball.y = 0;
-                s->ball.yspd = -s->ball.yspd + make_bounce_offset(ball);
-            }
-        }
-
-        for (int y = 0; y < LAYERS; y++) {
-            for (int x = 0; x < NUM_BRICKS; x++) {
-                Brick* brick = &s->bricks[y][x];
-
-                if (!brick->active) {
-                    continue;
-                }
-
-                if (CheckCollisionCircleRec(ball_pos, BALL_RADIUS,
-                                            brick->rec)) {
-                    bool ball_between_brick_x =
-                        ball_pos.x > brick->rec.x &&
-                        ball_pos.x < brick->rec.x + brick->rec.width;
-                    bool ball_between_brick_y =
-                        ball_pos.y < brick->rec.y &&
-                        ball_pos.y > brick->rec.y + brick->rec.height;
-
-                    // ball above or below
-                    if (ball_between_brick_x) {
-                        if (ball->y + BALL_RADIUS < brick->rec.y) {
-                            ball->y = brick->rec.y - BALL_RADIUS;
-                        } else if (ball->y - BALL_RADIUS >
-                                   brick->rec.y + brick->rec.height) {
-                            ball->y =
-                                brick->rec.y + brick->rec.height + BALL_RADIUS;
-                        }
-
-                        ball->yspd = -ball->yspd;
-                    }
-
-                    // ball left or right
-                    if (ball_between_brick_y) {
-                        if (ball->x + BALL_RADIUS < brick->rec.x) {
-                            ball->x = brick->rec.x - BALL_RADIUS;
-                        } else if (ball->x - BALL_RADIUS >
-                                   brick->rec.x + brick->rec.width) {
-                            ball->x =
-                                brick->rec.x + brick->rec.width + BALL_RADIUS;
-                        }
-
-                        ball->xspd = -ball->xspd;
-                    }
-
-                    s->score += brick->value;
-                    brick->active = false;
-                }
-            }
-        }
+    switch (s->screen) {
+        case SCR_GAME: {
+            update_game(s);
+        } break;
+        case SCR_DEAD: {
+            update_dead(s);
+        } break;
+        case SCR_WIN: {
+            update_win(s);
+        } break;
+        case SCR_TITLE: {
+            update_title(s);
+        } break;
+        case SCR_SETTINGS: {
+            update_settings(s);
+        } break;
     }
 }
 
@@ -358,6 +547,7 @@ void reset_state(State* s) {
     const int min_xspd = 2;
     const int max_yspd = 6;
     const int min_yspd = 3;
+
     int xspd = rand() % (max_xspd - min_xspd + 1) + min_xspd;
     int yspd = rand() % (max_yspd - min_yspd - 2) + min_yspd;
 
@@ -378,7 +568,7 @@ void reset_state(State* s) {
                      .yspd = yspd,
                      .color = GRAY,
                      },
-        .dead = false,
+        .screen = SCR_TITLE,
     };
 
     make_bricks(s);
@@ -386,7 +576,7 @@ void reset_state(State* s) {
 
 int main(void) {
     InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
-    SetTargetFPS(60);
+    SetTargetFPS(60 / (1 / SPEED));
     srand(time(NULL));
 
     for (int i = 1; i <= LAYERS; i++) {

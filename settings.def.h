@@ -22,12 +22,12 @@ typedef enum {
 // --- DO NOT TOUCH ABOVE ---
 
 // --- Configuration Options---
-#define WINWIDTH      600 // Window Width
-#define WINHEIGHT     800 // Window Height
-#define PADDLE_WIDTH  100 // Paddle Width
-#define PADDLE_HEIGHT 20  // Paddle Height
-#define PADDLE_SPEED  5   // Paddle Speed
-#define LAYERS        7   // Layers of bricks (above 7 is undefined behavior)
+#define WINWIDTH             600 // Window Width
+#define WINHEIGHT            800 // Window Height
+#define PADDLE_WIDTH         100 // Paddle Width
+#define PADDLE_HEIGHT        20  // Paddle Height
+#define INITIAL_PADDLE_SPEED 5   // Paddle Speed
+#define LAYERS               7 // Layers of bricks (above 7 is undefined behavior)
 
 #define BRICK_WIDTH  50 // Width of a single brick
 #define BRICK_HEIGHT 10 // Height of a single brick
