@@ -14,6 +14,10 @@ tarball:
 	tar czvf brickout.tar.gz brickout
 	rm -rf brickout
 
+defaults:
+	rm -f settings.h
+	cp settings.def.h settings.h
+
 clean:
 	rm -rf brickout brickout.tar.gz brickout $(OBJ)
 
