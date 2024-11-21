@@ -1,6 +1,6 @@
 CC = cc
 LIBS = $(shell pkg-config --cflags --libs raylib) -lm
-CFLAGS = -O2 -march=native -flto=auto $(CFLAGS)
+CFLAGS = -O2 -march=native -flto=auto $(LIBS)
 OBJ = brickout.o
 
 brickout: $(OBJ)
