@@ -20,7 +20,7 @@
 #define VERSION "0.1.0-pre"
 
 // color is a hex code, rgb
-inline Color color(int color) {
+Color color(int color) {
     // copied from somewhere
     uint8_t r = color >> 16 & 0xFF;
     uint8_t g = color >> 8 & 0xFF;
@@ -126,15 +126,41 @@ typedef enum {
 typedef struct {
     Paddle paddle;
     Ball ball;
-    Screen screen;
     int score;
     int paddle_speed;
     bool paused;
+    bool exit_overlay;
     Brick bricks[LAYERS][NUM_BRICKS];
+} GameState;
+
+typedef struct {
+    int title_anim_stage;
+    bool title_anim_growing;
+} TitleScreenState;
+
+typedef struct {
+    GameState game;
+    TitleScreenState title_screen;
+    Screen screen;
 } State;
 
 static int maxscore;
-void reset_state(State* s);
+
+// The global game state
+State s;
+
+// Reference to s.game
+GameState* const gs = &s.game;
+
+// Reference to s.title_screen
+TitleScreenState* const tss = &s.title_screen;
+
+bool should_close = false;
+
+// Reset the state of the game
+void reset_state(void);
+void reset_game(void);
+void reset_title(void);
 
 int get_bounce_offset(const Ball* ball) {
     double avg =
@@ -147,7 +173,7 @@ int get_bounce_offset(const Ball* ball) {
     return result + 0.5;
 }
 
-void make_bricks(State* s) {
+void make_bricks(void) {
     int cur_x = BRICK_PADDING + 10;
     int cur_y = 60;
     int starting_x = cur_x;
@@ -155,7 +181,7 @@ void make_bricks(State* s) {
     for (int layer = 0; layer < LAYERS; layer++) {
         for (int i = 0; i < NUM_BRICKS; i++) {
             Rectangle rec = {cur_x, cur_y, BRICK_WIDTH, BRICK_HEIGHT};
-            s->bricks[layer][i] = (Brick){rec, LAYERS - layer, true};
+            gs->bricks[layer][i] = (Brick){rec, LAYERS - layer, true};
             cur_x += BRICK_WIDTH + 20;
         }
         cur_x = starting_x;
@@ -163,10 +189,10 @@ void make_bricks(State* s) {
     }
 }
 
-void draw_game_bricks(State* s) {
+void draw_game_bricks(void) {
     for (int y = 0; y < LAYERS; y++) {
         for (int x = 0; x < NUM_BRICKS; x++) {
-            Brick* b = &s->bricks[y][x];
+            Brick* b = &gs->bricks[y][x];
 
             if (b->active) {
                 DrawRectangleRec(b->rec, color(BRICK_COLORS[b->value]));
@@ -175,36 +201,15 @@ void draw_game_bricks(State* s) {
     }
 }
 
-void draw_game_score(State* s) {
+void draw_game_score(void) {
     char txt[20] = {0};
-    snprintf(txt, 20, "Score: %d/%d", s->score, maxscore);
+    snprintf(txt, 20, "Score: %d/%d", gs->score, maxscore);
     DrawText(txt, 20, 20, 20, color(TXT_PRIMARY_COLOR));
 }
 
-void draw_game(State* s) {
-    if (s->paused) {
-        Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
-        DrawRectangleRec(darken, (Color){100, 100, 100, 100});
-
-        const char* pause = "paused";
-        const int pause_txtsz = 80;
-        int pause_width = MeasureText(pause, pause_txtsz);
-        int pause_posx = (WINWIDTH / 2) - pause_width / 2;
-        int pause_posy = (WINHEIGHT / 2) - pause_txtsz / 2;
-
-        DrawText(pause, pause_posx, pause_posy, pause_txtsz,
-                 color(TXT_PRIMARY_COLOR));
-    }
-
-    DrawRectangleRec(s->paddle.rec, s->paddle.color);
-    DrawCircle(s->ball.x, s->ball.y, BALL_RADIUS, color(BALL_COLOR));
-    draw_game_bricks(s);
-    draw_game_score(s);
-}
-
-void draw_dead(State* s) {
+void draw_dead(void) {
     const char* death_txt = "Game over!";
-    const char* reset_txt = "Press <r> to restart";
+    const char* reset_txt = "Press <r> to restart, <t> for title screen";
     const int death_txtsz = 100;
     const int reset_txtsz = 20;
 
@@ -219,12 +224,12 @@ void draw_dead(State* s) {
              color(TXT_PRIMARY_COLOR));
     DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
              color(TXT_SECONDARY_COLOR));
-    draw_game_score(s);
+    draw_game_score();
 }
 
-void draw_win(State* s) {
+void draw_win(void) {
     const char* win_txt = "You won!";
-    const char* reset_txt = "Press <r> to restart";
+    const char* reset_txt = "Press <r> to restart, <t> for title screen";
     const int win_txtsz = 100;
     const int reset_txtsz = 20;
 
@@ -238,12 +243,19 @@ void draw_win(State* s) {
     DrawText(win_txt, win_posx, win_posy, win_txtsz, color(TXT_PRIMARY_COLOR));
     DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
              color(TXT_SECONDARY_COLOR));
-    draw_game_score(s);
+    draw_game_score();
 }
 
-void draw_title(State* s) {
+void draw_title(void) {
     const char* title = "Brick-out";
-    const int title_txtsz = 120;
+    int title_txtsz;
+
+    if (tss->title_anim_stage == 0) {
+        title_txtsz = 100;
+    } else {
+        title_txtsz = 100 + (int)(tss->title_anim_stage / 3);
+    }
+
     int title_width = MeasureText(title, title_txtsz);
     int title_posx = (WINWIDTH / 2) - title_width / 2;
     int title_posy = (WINHEIGHT / 2) - title_txtsz / 2;
@@ -258,45 +270,92 @@ void draw_title(State* s) {
              color(TXT_PRIMARY_COLOR));
     DrawText(begin, begin_posx, begin_posy, begin_txtsz,
              color(TXT_SECONDARY_COLOR));
+
+    DrawText("Copyright (c) Eason Qin <eason@ezntek.com>, 2024", 20, 20, 10,
+             color(TXT_SECONDARY_COLOR));
+    DrawText("version " VERSION, 20, 34, 10, color(TXT_SECONDARY_COLOR));
 }
 
-void draw_settings(State* s) { return draw_dead(s); }
+void draw_settings(void) { return draw_dead(); }
 
-void draw(State* s) {
-    switch (s->screen) {
+void draw_game(void) {
+    if (gs->paused) {
+        Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
+        DrawRectangleRec(darken, (Color){100, 100, 100, 100});
+
+        const char* pause = "paused";
+        const int pause_txtsz = 60;
+        int pause_width = MeasureText(pause, pause_txtsz);
+        int pause_posx = (WINWIDTH / 2) - pause_width / 2;
+        int pause_posy = (WINHEIGHT / 2) - pause_txtsz / 2;
+
+        DrawText(pause, pause_posx, pause_posy, pause_txtsz,
+                 color(TXT_PRIMARY_COLOR));
+    }
+
+    if (gs->exit_overlay) {
+        Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
+        DrawRectangleRec(darken, (Color){100, 100, 100, 100});
+
+        const char* exit = "exit?";
+        const int exit_txtsz = 60;
+        int exit_width = MeasureText(exit, exit_txtsz);
+        int exit_posx = (WINWIDTH / 2) - exit_width / 2;
+        int exit_posy = (WINHEIGHT / 2) - exit_txtsz / 2;
+
+        const char* confirm = "<y> for yes, <n> for no";
+        const int confirm_txtsz = 20;
+        int confirm_width = MeasureText(confirm, confirm_txtsz);
+        int confirm_posx = (WINWIDTH / 2) - confirm_width / 2;
+        int confirm_posy = WINHEIGHT - confirm_txtsz - 20;
+
+        DrawText(exit, exit_posx, exit_posy, exit_txtsz,
+                 color(TXT_PRIMARY_COLOR));
+        DrawText(confirm, confirm_posx, confirm_posy, confirm_txtsz,
+                 color(TXT_SECONDARY_COLOR));
+    }
+
+    DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
+    DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, color(BALL_COLOR));
+    draw_game_bricks();
+    draw_game_score();
+}
+
+void draw(void) {
+    switch (s.screen) {
         case SCR_GAME: {
-            draw_game(s);
+            draw_game();
         } break;
         case SCR_DEAD: {
-            draw_dead(s);
+            draw_dead();
         } break;
         case SCR_WIN: {
-            draw_win(s);
+            draw_win();
         } break;
         case SCR_TITLE: {
-            draw_title(s);
+            draw_title();
         } break;
         case SCR_SETTINGS: {
-            draw_settings(s);
+            draw_settings();
         } break;
     }
 }
 
-void update_game_paddle(State* s) {
-    Paddle* paddle = &s->paddle;
-    Ball* ball = &s->ball;
+void update_game_paddle(void) {
+    Paddle* paddle = &gs->paddle;
+    Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     // paddle update logic
     if (IsKeyDown(KEY_LEFT)) {
-        if (paddle->rec.x - s->paddle_speed >= 0) {
-            paddle->rec.x -= s->paddle_speed;
+        if (paddle->rec.x - gs->paddle_speed >= 0) {
+            paddle->rec.x -= gs->paddle_speed;
         } else {
             paddle->rec.x = 0;
         }
     } else if (IsKeyDown(KEY_RIGHT)) {
-        if (paddle->rec.x + s->paddle_speed <= WINWIDTH - PADDLE_WIDTH) {
-            paddle->rec.x += s->paddle_speed;
+        if (paddle->rec.x + gs->paddle_speed <= WINWIDTH - PADDLE_WIDTH) {
+            paddle->rec.x += gs->paddle_speed;
         } else {
             paddle->rec.x = WINWIDTH - PADDLE_WIDTH;
         }
@@ -344,18 +403,18 @@ void update_game_paddle(State* s) {
     }
 }
 
-void update_game_ball(State* s) {
-    Paddle* paddle = &s->paddle;
-    Ball* ball = &s->ball;
+void update_game_ball(void) {
+    Paddle* paddle = &gs->paddle;
+    Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     // ball update logic
     if (ball->xspd > 0) {
         if (ball->x + ball->xspd < WINWIDTH - BALL_RADIUS) {
-            s->ball.x += s->ball.xspd;
+            gs->ball.x += gs->ball.xspd;
         } else {
-            s->ball.x = WINWIDTH - BALL_RADIUS;
-            s->ball.xspd = -s->ball.xspd + get_bounce_offset(ball);
+            gs->ball.x = WINWIDTH - BALL_RADIUS;
+            gs->ball.xspd = -gs->ball.xspd + get_bounce_offset(ball);
 
             if (ball->xspd < 0) {
                 ball->xspd -= 0.05;
@@ -367,10 +426,10 @@ void update_game_ball(State* s) {
         }
     } else if (ball->xspd < 0) {
         if (ball->x + ball->xspd > BALL_RADIUS) {
-            s->ball.x += s->ball.xspd;
+            gs->ball.x += gs->ball.xspd;
         } else {
-            s->ball.x = BALL_RADIUS;
-            s->ball.xspd = -s->ball.xspd + get_bounce_offset(ball);
+            gs->ball.x = BALL_RADIUS;
+            gs->ball.xspd = -gs->ball.xspd + get_bounce_offset(ball);
 
             if (ball->xspd < 0) {
                 ball->xspd -= 0.05;
@@ -384,29 +443,29 @@ void update_game_ball(State* s) {
 
     if (ball->yspd > 0) {
         if (ball->y + ball->yspd < WINHEIGHT - BALL_RADIUS) {
-            s->ball.y += s->ball.yspd;
+            gs->ball.y += gs->ball.yspd;
         } else {
-            s->ball.y = WINHEIGHT - BALL_RADIUS;
-            s->ball.yspd = -s->ball.yspd + get_bounce_offset(ball);
+            gs->ball.y = WINHEIGHT - BALL_RADIUS;
+            gs->ball.yspd = -gs->ball.yspd + get_bounce_offset(ball);
         }
     } else if (ball->yspd < 0) {
         if (ball->y + ball->yspd > 0) {
-            s->ball.y += s->ball.yspd;
+            gs->ball.y += gs->ball.yspd;
         } else {
-            s->ball.y = 0;
-            s->ball.yspd = -s->ball.yspd + get_bounce_offset(ball);
+            gs->ball.y = 0;
+            gs->ball.yspd = -gs->ball.yspd + get_bounce_offset(ball);
         }
     }
 }
 
-void update_game_bricks(State* s) {
-    Paddle* paddle = &s->paddle;
-    Ball* ball = &s->ball;
+void update_game_bricks(void) {
+    Paddle* paddle = &gs->paddle;
+    Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     for (int y = 0; y < LAYERS; y++) {
         for (int x = 0; x < NUM_BRICKS; x++) {
-            Brick* brick = &s->bricks[y][x];
+            Brick* brick = &gs->bricks[y][x];
 
             if (!brick->active) {
                 continue;
@@ -422,11 +481,10 @@ void update_game_bricks(State* s) {
                     ball_pos.y + BALL_RADIUS < brick->rec.y &&
                     ball_pos.y - BALL_RADIUS > brick->rec.y + brick->rec.height;
 
-                // ball above or below
                 if (ball_between_brick_x) {
                     if (ball->y + BALL_RADIUS < brick->rec.y) {
                         ball->y = brick->rec.y - BALL_RADIUS;
-                    } else if (ball->y - BALL_RADIUS <
+                    } else if (ball->y - BALL_RADIUS >
                                brick->rec.y + brick->rec.height) {
                         ball->y =
                             brick->rec.y + brick->rec.height + BALL_RADIUS;
@@ -434,115 +492,152 @@ void update_game_bricks(State* s) {
 
                     ball->yspd = -ball->yspd;
                     ball->y += ball->yspd;
-                }
-
-                // ball left or right
-                if (ball_between_brick_y) {
-                    if (ball->x + BALL_RADIUS < brick->rec.x) {
+                } else if (ball_between_brick_y) {
+                    if (ball->x + BALL_RADIUS > brick->rec.x) {
                         ball->x = brick->rec.x - BALL_RADIUS;
-                    } else if (ball->x - BALL_RADIUS >
+                    } else if (ball->x - BALL_RADIUS <
                                brick->rec.x + brick->rec.width) {
                         ball->x = brick->rec.x + brick->rec.width + BALL_RADIUS;
-                    }
-
-                    const int half_height = brick->rec.height / 2;
-                    const int middle = brick->rec.y + half_height;
-
-                    if (ball->y <= middle) {
-                        ball->y =
-                            brick->rec.y + brick->rec.height + BALL_RADIUS;
-                    } else {
-                        ball->y = brick->rec.y - BALL_RADIUS;
                     }
 
                     ball->xspd = -ball->xspd;
                     ball->x += ball->xspd;
                 }
-
-                s->score += brick->value;
+                gs->score += brick->value;
             }
         }
     }
 }
 
-void update_dead(State* s) {
+void update_dead(void) {
     if (IsKeyPressed(KEY_R)) {
-        reset_state(s);
-        s->screen = SCR_GAME;
+        reset_game();
+        s.screen = SCR_GAME;
+    }
+
+    if (IsKeyPressed(KEY_T)) {
+        reset_title();
+        s.screen = SCR_TITLE;
     }
 }
 
-void update_game(State* s) {
-    Paddle* paddle = &s->paddle;
-    Ball* ball = &s->ball;
+void update_win(void) {
+    if (IsKeyPressed(KEY_R)) {
+        reset_game();
+        s.screen = SCR_GAME;
+    }
+
+    if (IsKeyPressed(KEY_T)) {
+        reset_title();
+        s.screen = SCR_TITLE;
+    }
+}
+
+void update_title(void) {
+    if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
+        should_close = true;
+        return;
+    }
+
+    if (GetCharPressed() != 0) {
+        reset_game();
+        s.screen = SCR_GAME;
+    }
+
+    if (tss->title_anim_stage >= 60 || tss->title_anim_stage <= 0) {
+        tss->title_anim_growing = !tss->title_anim_growing;
+    }
+
+    if (tss->title_anim_growing) {
+        tss->title_anim_stage++;
+    } else {
+        tss->title_anim_stage--;
+    }
+}
+
+void update_settings(void) { return update_dead(); }
+
+void update_game(void) {
+    Paddle* paddle = &gs->paddle;
+    Ball* ball = &gs->ball;
 
     // funny raylib CheckCollisionCircleRec shit
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     double paddle_speed_offset =
         (double)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd)) / 5;
-    s->paddle_speed = INITIAL_PADDLE_SPEED + paddle_speed_offset;
+    gs->paddle_speed = INITIAL_PADDLE_SPEED + paddle_speed_offset;
 
     if (ball->y + BALL_RADIUS > paddle->rec.y + paddle->rec.height) {
-        s->screen = SCR_DEAD;
+        s.screen = SCR_DEAD;
         return;
     }
 
-    if (s->score >= maxscore) {
-        s->screen = SCR_WIN;
+    if (gs->score >= maxscore) {
+        s.screen = SCR_WIN;
         return;
     }
 
     if (IsKeyPressed(KEY_K)) {
-        s->screen = SCR_DEAD;
+        s.screen = SCR_DEAD;
         return;
     }
 
     if (IsKeyPressed(KEY_SPACE)) {
-        s->paused = !s->paused;
+        gs->paused = !gs->paused;
     }
 
-    if (s->paused) {
+    if (gs->paused) {
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            gs->paused = false;
+        }
+
         return;
     }
 
-    update_game_paddle(s);
-    update_game_ball(s);
-    update_game_bricks(s);
-}
-
-void update_title(State* s) {
-    if (GetCharPressed() != 0) {
-        reset_state(s);
-        s->screen = SCR_GAME;
+    if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
+        gs->exit_overlay = !gs->exit_overlay;
     }
+
+    if (gs->exit_overlay) {
+        if (IsKeyPressed(KEY_N)) {
+            gs->exit_overlay = false; // back
+        } else if (IsKeyPressed(KEY_Y)) {
+            s.screen = SCR_TITLE;
+            reset_title();
+            reset_game();
+            return;
+        }
+
+        return;
+    }
+
+    update_game_paddle();
+    update_game_ball();
+    update_game_bricks();
 }
 
-void update_win(State* s) { return update_dead(s); }
-void update_settings(State* s) { return update_dead(s); }
-
-void update(State* s) {
-    switch (s->screen) {
+void update(void) {
+    switch (s.screen) {
         case SCR_GAME: {
-            update_game(s);
+            update_game();
         } break;
         case SCR_DEAD: {
-            update_dead(s);
+            update_dead();
         } break;
         case SCR_WIN: {
-            update_win(s);
+            update_win();
         } break;
         case SCR_TITLE: {
-            update_title(s);
+            update_title();
         } break;
         case SCR_SETTINGS: {
-            update_settings(s);
+            update_settings();
         } break;
     }
 }
 
-void reset_state(State* s) {
-    srand(time(NULL));
+void reset_game(void) {
     const int max_xspd = 4;
     const int min_xspd = 2;
     const int max_yspd = 6;
@@ -555,7 +650,7 @@ void reset_state(State* s) {
         xspd = -xspd;
     }
 
-    *s = (State){
+    *gs = (GameState){
         .paddle =
             (Paddle){.rec = (Rectangle){PADDLE_DEFAULT_X, PADDLE_DEFAULT_Y,
                                         PADDLE_WIDTH, PADDLE_HEIGHT},
@@ -568,29 +663,50 @@ void reset_state(State* s) {
                      .yspd = yspd,
                      .color = GRAY,
                      },
+    };
+
+    make_bricks();
+}
+
+void reset_title(void) {
+    *tss = (TitleScreenState){
+        .title_anim_stage = 1,
+        .title_anim_growing = true,
+    };
+}
+
+void reset_state(void) {
+    srand(time(NULL));
+
+    s = (State){
         .screen = SCR_TITLE,
     };
 
-    make_bricks(s);
+    reset_game();
+    reset_title();
 }
 
 int main(void) {
     InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
-    SetTargetFPS(60 / (1 / SPEED));
+    SetTargetFPS((int)(60 / (1 / SPEED)));
     srand(time(NULL));
+    SetExitKey(KEY_NULL);
 
     for (int i = 1; i <= LAYERS; i++) {
         maxscore += NUM_BRICKS * i;
     }
 
-    State s;
-    reset_state(&s);
+    State s = {0};
+    reset_state();
 
-    while (!WindowShouldClose()) {
-        update(&s);
+    while (!should_close) {
+        if (WindowShouldClose() || should_close)
+            should_close = true;
+
+        update();
         BeginDrawing();
         ClearBackground(color(BG_COLOR));
-        draw(&s);
+        draw();
         EndDrawing();
     }
 
