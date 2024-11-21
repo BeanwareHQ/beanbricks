@@ -34,4 +34,8 @@ typedef enum {
 
 #define BALL_RADIUS 10 // Ball Radius
 
+#define SPEED                                                                  \
+    1 // Global speed multiplier. A decimal makes the game slower, 1=60FPS. 0 is
+      // undefined.
+
 #define THEME THEME_DEFAULT // Theme (choose options above)
