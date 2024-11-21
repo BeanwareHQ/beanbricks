@@ -35,15 +35,14 @@ inline Color color(int color) {
 
 #if THEME == THEME_DARK
 // dark theme
-const Color BRICK_COLORS[] = {
-    [1] = RED,  [2] = ORANGE, [3] = GOLD,   [4] = GREEN,
-    [5] = BLUE, [6] = PURPLE, [7] = VIOLET,
+const int BRICK_COLORS[] = {
+    [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
+    [5] = 0x0079f1, [6] = 0xc87aff, [7] = 0x873cbe,
 };
-#define BG_COLOR                                                               \
-    (Color) { 30, 30, 35, 255 }
-#define BALL_COLOR          LIGHTGRAY
-#define TXT_PRIMARY_COLOR   RAYWHITE
-#define TXT_SECONDARY_COLOR LIGHTGRAY
+#define BG_COLOR            0x50505a
+#define BALL_COLOR          0xc8c8c8
+#define TXT_PRIMARY_COLOR   0xffffff
+#define TXT_SECONDARY_COLOR 0xf5f5f5
 #elif THEME == CTP_MOCHA
 // mocha
 const int BRICK_COLORS[] = {
@@ -84,14 +83,14 @@ const int BRICK_COLORS[] = {
 #define TXT_PRIMARY_COLOR   0x4c4f69
 #define TXT_SECONDARY_COLOR 0x4c4f69
 #else
-const Color BRICK_COLORS[] = {
-    [1] = RED,  [2] = ORANGE, [3] = GOLD,   [4] = GREEN,
-    [5] = BLUE, [6] = PURPLE, [7] = VIOLET,
+const int BRICK_COLORS[] = {
+    [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
+    [5] = 0x0079f1, [6] = 0xc87aff, [7] = 0x873cbe,
 };
-#define BG_COLOR   RAYWHITE
-#define BALL_COLOR GRAY
-#define TXT_PRIMARY_COLOR
-#define TXT_PRIMARY_COLOR
+#define BG_COLOR            0xf5f5f5
+#define BALL_COLOR          0x828282
+#define TXT_PRIMARY_COLOR   0x000000
+#define TXT_SECONDARY_COLOR 0x505050
 #endif
 
 typedef struct {
