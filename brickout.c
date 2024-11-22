@@ -207,6 +207,34 @@ void draw_game_score(void) {
     DrawText(txt, 20, 20, 20, color(TXT_PRIMARY_COLOR));
 }
 
+void draw_game_progressbar(void) {
+    const int WIDTH = 150;
+    const Rectangle border = {
+        WINWIDTH - WIDTH - 20, // - width - padding,
+        20,
+        WIDTH,
+        18,
+    };
+
+    const Rectangle background = {
+        WINWIDTH - WIDTH - 20 + 2, // padding
+        22,                        // 20 + 2
+        WIDTH - 4,
+        14, // 18 - 4
+    };
+
+    const Rectangle filling = {
+        WINWIDTH - WIDTH - 20 + 2, // padding
+        22,                        // 20 + 2
+        (int)(WIDTH * s.game.score / maxscore),
+        14, // 18 - 4
+    };
+
+    DrawRectangleRec(border, color(TXT_PRIMARY_COLOR));
+    DrawRectangleRec(background, color(BG_COLOR));
+    DrawRectangleRec(filling, color(BRICK_COLORS[1]));
+}
+
 void draw_dead(void) {
     const char* death_txt = "Game over!";
     const char* reset_txt = "Press <r> to restart, <t> for title screen";
@@ -217,7 +245,7 @@ void draw_dead(void) {
     int reset_width = MeasureText(reset_txt, reset_txtsz);
 
     int death_posx = (WINWIDTH / 2) - death_width / 2;
-    int death_posy = (WINHEIGHT / 2) - death_txtsz;
+    int death_posy = (WINHEIGHT / 2) - death_txtsz / 2;
     int reset_posx = (WINWIDTH / 2) - reset_width / 2;
 
     DrawText(death_txt, death_posx, death_posy, death_txtsz,
@@ -225,6 +253,7 @@ void draw_dead(void) {
     DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
              color(TXT_SECONDARY_COLOR));
     draw_game_score();
+    draw_game_progressbar();
 }
 
 void draw_win(void) {
@@ -237,13 +266,14 @@ void draw_win(void) {
     int reset_width = MeasureText(reset_txt, reset_txtsz);
 
     int win_posx = (WINWIDTH / 2) - win_width / 2;
-    int win_posy = (WINHEIGHT / 2) - win_txtsz;
+    int win_posy = (WINHEIGHT / 2) - win_txtsz / 2;
     int reset_posx = (WINWIDTH / 2) - reset_width / 2;
 
     DrawText(win_txt, win_posx, win_posy, win_txtsz, color(TXT_PRIMARY_COLOR));
     DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
              color(TXT_SECONDARY_COLOR));
     draw_game_score();
+    draw_game_progressbar();
 }
 
 void draw_title(void) {
@@ -319,6 +349,7 @@ void draw_game(void) {
     DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, color(BALL_COLOR));
     draw_game_bricks();
     draw_game_score();
+    draw_game_progressbar();
 }
 
 void draw(void) {
