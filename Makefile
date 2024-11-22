@@ -1,6 +1,6 @@
 CC = cc
 LIBS = $(shell pkg-config --cflags --libs raylib) -lm
-CFLAGS = -O2 -march=native -flto=auto $(LIBS)
+CFLAGS = -O2 -Wall -Wpedantic -march=native -flto=auto $(LIBS)
 OBJ = brickout.o
 
 brickout: mksettings $(OBJ)
@@ -23,6 +23,7 @@ defaults:
 
 clean:
 	rm -rf brickout brickout.tar.gz brickout $(OBJ)
-	make defaults
 
-.PHONY: clean
+cleanall: clean defaults
+
+.PHONY: clean cleanall

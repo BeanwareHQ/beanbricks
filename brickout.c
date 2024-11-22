@@ -41,11 +41,11 @@ const int BRICK_COLORS[] = {
     [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
     [5] = 0x0079f1, [6] = 0xc87aff, [7] = 0x873cbe,
 };
-#define BG_COLOR            0x50505a
+#define BG_COLOR            0x10101a
 #define BALL_COLOR          0xc8c8c8
 #define TXT_PRIMARY_COLOR   0xffffff
 #define TXT_SECONDARY_COLOR 0xf5f5f5
-#elif THEME == CTP_MOCHA
+#elif THEME == THEME_CTP_MOCHA
 // mocha
 const int BRICK_COLORS[] = {
     [1] = 0xf38ba8, [2] = 0xfab387, [3] = 0xf9e2af, [4] = 0xa6e3a1,
@@ -55,7 +55,7 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x9399b2
 #define TXT_PRIMARY_COLOR   0xcdd6f4
 #define TXT_SECONDARY_COLOR 0xbac2de
-#elif THEME == CTP_MACCHIATO
+#elif THEME == THEME_CTP_MACCHIATO
 // macchiato
 const int BRICK_COLORS[] = {
     [1] = 0xed8796, [2] = 0xf5a97f, [3] = 0xeed49f, [4] = 0xa6da95,
@@ -65,7 +65,7 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x939ab7
 #define TXT_PRIMARY_COLOR   0xcad3f5
 #define TXT_SECONDARY_COLOR 0xb8c0e0
-#elif THEME == CTP_FRAPPE
+#elif THEME == THEME_CTP_FRAPPE
 // frappe
 const int BRICK_COLORS[] = {
     [1] = 0xe78284, [2] = 0xef9f76, [3] = 0xe5c890, [4] = 0xa6d189,
@@ -74,7 +74,7 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x949cbb
 #define TXT_PRIMARY_COLOR   0xc6d0f5
 #define TXT_SECONDARY_COLOR 0xb5bfe2
-#elif THEME == CTP_LATTE
+#elif THEME == THEME_CTP_LATTE
 // frappe
 const int BRICK_COLORS[] = {
     [1] = 0xd20f39, [2] = 0xfe640b, [3] = 0xdf8e1d, [4] = 0x40a02b,
@@ -127,6 +127,7 @@ typedef struct {
     Paddle paddle;
     Ball ball;
     int score;
+    int bricks_broken; // HUD
     int paddle_speed;
     bool paused;
     bool exit_overlay;
@@ -170,7 +171,7 @@ int get_bounce_offset(const Ball* ball) {
     double base = (double)rand() / (double)(RAND_MAX);
     double result = min + base * (max - min);
 
-    return result + 0.5;
+    return result + 0.2;
 }
 
 void make_bricks(void) {
@@ -201,38 +202,59 @@ void draw_game_bricks(void) {
     }
 }
 
-void draw_game_score(void) {
+void draw_game_hud_left(void) {
     char txt[20] = {0};
-    snprintf(txt, 20, "Score: %d/%d", gs->score, maxscore);
+    snprintf(txt, sizeof(txt), "Score: %d/%d", gs->score, maxscore);
     DrawText(txt, 20, 20, 20, color(TXT_PRIMARY_COLOR));
+
+#ifdef DEBUG_INFO
+    const int txt_width = MeasureText(txt, 20);
+    char spd[30] = {0};
+    const double avg_speed = (double)sqrt(gs->ball.xspd * gs->ball.xspd +
+                                          gs->ball.yspd * gs->ball.yspd);
+    snprintf(spd, sizeof(spd), "Speed: %0.4f (%0.3f,%0.3f)", avg_speed,
+             gs->ball.xspd, gs->ball.yspd);
+
+    DrawText(spd, 20 + txt_width + 10, 20, 20, color(TXT_SECONDARY_COLOR));
+#endif
 }
 
-void draw_game_progressbar(void) {
+void draw_game_hud_right(void) {
     const int WIDTH = 150;
+    char buf[10];
+
+    sprintf(buf, "%.01lf%%",
+            (double)gs->bricks_broken * 100 / (LAYERS * NUM_BRICKS));
+
+    const int BAR_WIDTH = WINWIDTH - WIDTH - 20;
+    const int TEXT_WIDTH = MeasureText(buf, 20);
+
     const Rectangle border = {
-        WINWIDTH - WIDTH - 20, // - width - padding,
+        BAR_WIDTH, // - width - padding,
         20,
         WIDTH,
         18,
     };
 
     const Rectangle background = {
-        WINWIDTH - WIDTH - 20 + 2, // padding
-        22,                        // 20 + 2
+        BAR_WIDTH + 2, // padding
+        22,            // 20 + 2
         WIDTH - 4,
         14, // 18 - 4
     };
 
     const Rectangle filling = {
-        WINWIDTH - WIDTH - 20 + 2, // padding
-        22,                        // 20 + 2
-        (int)(WIDTH * s.game.score / maxscore),
+        BAR_WIDTH + 2, // padding
+        22,            // 20 + 2
+        (int)(WIDTH * gs->bricks_broken / (LAYERS * NUM_BRICKS)),
         14, // 18 - 4
     };
 
     DrawRectangleRec(border, color(TXT_PRIMARY_COLOR));
     DrawRectangleRec(background, color(BG_COLOR));
     DrawRectangleRec(filling, color(BRICK_COLORS[1]));
+    DrawText(buf, BAR_WIDTH - TEXT_WIDTH - 10, 20, 20,
+             color(TXT_PRIMARY_COLOR));
 }
 
 void draw_dead(void) {
@@ -252,8 +274,8 @@ void draw_dead(void) {
              color(TXT_PRIMARY_COLOR));
     DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
              color(TXT_SECONDARY_COLOR));
-    draw_game_score();
-    draw_game_progressbar();
+    draw_game_hud_left();
+    draw_game_hud_right();
 }
 
 void draw_win(void) {
@@ -272,8 +294,8 @@ void draw_win(void) {
     DrawText(win_txt, win_posx, win_posy, win_txtsz, color(TXT_PRIMARY_COLOR));
     DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
              color(TXT_SECONDARY_COLOR));
-    draw_game_score();
-    draw_game_progressbar();
+    draw_game_hud_left();
+    draw_game_hud_right();
 }
 
 void draw_title(void) {
@@ -283,14 +305,14 @@ void draw_title(void) {
     if (tss->title_anim_stage == 0) {
         title_txtsz = 100;
     } else {
-        title_txtsz = 100 + (int)(tss->title_anim_stage / 3);
+        title_txtsz = 100 + (int)(tss->title_anim_stage / 5);
     }
 
     int title_width = MeasureText(title, title_txtsz);
     int title_posx = (WINWIDTH / 2) - title_width / 2;
-    int title_posy = (WINHEIGHT / 2) - title_txtsz / 2;
+    int title_posy = WINHEIGHT * 0.16;
 
-    const char* begin = "press any key to begin";
+    const char* begin = "press enter to begin";
     const int begin_txtsz = 20;
     int begin_width = MeasureText(begin, begin_txtsz);
     int begin_posx = (WINWIDTH / 2) - begin_width / 2;
@@ -309,6 +331,12 @@ void draw_title(void) {
 void draw_settings(void) { return draw_dead(); }
 
 void draw_game(void) {
+    DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
+    DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, color(BALL_COLOR));
+    draw_game_bricks();
+    draw_game_hud_left();
+    draw_game_hud_right();
+
     if (gs->paused) {
         Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
         DrawRectangleRec(darken, (Color){100, 100, 100, 100});
@@ -344,12 +372,6 @@ void draw_game(void) {
         DrawText(confirm, confirm_posx, confirm_posy, confirm_txtsz,
                  color(TXT_SECONDARY_COLOR));
     }
-
-    DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
-    DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, color(BALL_COLOR));
-    draw_game_bricks();
-    draw_game_score();
-    draw_game_progressbar();
 }
 
 void draw(void) {
@@ -415,20 +437,20 @@ void update_game_paddle(void) {
 
             if (ball->xspd < 0) {
                 ball->xspd -= get_bounce_offset(ball);
-                ball->xspd -= 0.15;
-                ball->yspd -= 0.1;
+                ball->xspd -= 0.055;
+                ball->yspd -= 0.05;
             } else {
                 ball->xspd += get_bounce_offset(ball);
-                ball->xspd += 0.15;
-                ball->yspd += 0.1;
+                ball->xspd += 0.055;
+                ball->yspd += 0.05;
             }
         } else {
             if (ball->xspd < 0) {
-                ball->xspd -= 0.1;
-                ball->yspd -= 0.1;
+                ball->xspd -= 0.05;
+                ball->yspd -= 0.05;
             } else {
-                ball->xspd += 0.1;
-                ball->yspd += 0.1;
+                ball->xspd += 0.05;
+                ball->yspd += 0.05;
             }
         }
     }
@@ -445,14 +467,14 @@ void update_game_ball(void) {
             gs->ball.x += gs->ball.xspd;
         } else {
             gs->ball.x = WINWIDTH - BALL_RADIUS;
-            gs->ball.xspd = -gs->ball.xspd + get_bounce_offset(ball);
+            gs->ball.xspd = -gs->ball.xspd;
 
             if (ball->xspd < 0) {
-                ball->xspd -= 0.05;
-                ball->yspd -= 0.05;
+                ball->xspd -= 0.02;
+                ball->yspd -= 0.02;
             } else {
-                ball->xspd += 0.05;
-                ball->yspd += 0.05;
+                ball->xspd += 0.02;
+                ball->yspd += 0.02;
             }
         }
     } else if (ball->xspd < 0) {
@@ -460,11 +482,11 @@ void update_game_ball(void) {
             gs->ball.x += gs->ball.xspd;
         } else {
             gs->ball.x = BALL_RADIUS;
-            gs->ball.xspd = -gs->ball.xspd + get_bounce_offset(ball);
+            gs->ball.xspd = -gs->ball.xspd;
 
             if (ball->xspd < 0) {
-                ball->xspd -= 0.05;
-                ball->yspd -= 0.05;
+                ball->xspd -= 0.02;
+                ball->yspd -= 0.02;
             } else {
                 ball->xspd += 0.05;
                 ball->yspd += 0.05;
@@ -477,14 +499,14 @@ void update_game_ball(void) {
             gs->ball.y += gs->ball.yspd;
         } else {
             gs->ball.y = WINHEIGHT - BALL_RADIUS;
-            gs->ball.yspd = -gs->ball.yspd + get_bounce_offset(ball);
+            gs->ball.yspd = -gs->ball.yspd;
         }
     } else if (ball->yspd < 0) {
         if (ball->y + ball->yspd > 0) {
             gs->ball.y += gs->ball.yspd;
         } else {
             gs->ball.y = 0;
-            gs->ball.yspd = -gs->ball.yspd + get_bounce_offset(ball);
+            gs->ball.yspd = -gs->ball.yspd;
         }
     }
 }
@@ -535,6 +557,7 @@ void update_game_bricks(void) {
                     ball->x += ball->xspd;
                 }
                 gs->score += brick->value;
+                gs->bricks_broken++;
             }
         }
     }
@@ -570,7 +593,7 @@ void update_title(void) {
         return;
     }
 
-    if (GetCharPressed() != 0) {
+    if (IsKeyPressed(KEY_ENTER) != 0) {
         reset_game();
         s.screen = SCR_GAME;
     }
