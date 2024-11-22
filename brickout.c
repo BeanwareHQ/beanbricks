@@ -328,7 +328,7 @@ void draw_title(void) {
     DrawText("version " VERSION, 20, 34, 10, color(TXT_SECONDARY_COLOR));
 }
 
-void draw_settings(void) { return draw_dead(); }
+void draw_settings(void) { draw_dead(); }
 
 void draw_game(void) {
     DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
@@ -414,11 +414,6 @@ void update_game_paddle(void) {
         }
     }
 
-    bool ball_between_paddle_x =
-        ball->x > paddle->rec.x && ball->x < paddle->rec.x + paddle->rec.width;
-    bool ball_between_paddle_y =
-        ball->y < paddle->rec.y && ball->y > paddle->rec.y + paddle->rec.height;
-
     if (CheckCollisionCircleRec(ball_pos, BALL_RADIUS, paddle->rec)) {
         ball->y = paddle->rec.y - BALL_RADIUS;
         ball->yspd = -ball->yspd;
@@ -429,8 +424,8 @@ void update_game_paddle(void) {
         }
 
         bool ball_and_paddle_direction_opposite =
-            ball->xspd < 0 && IsKeyDown(KEY_RIGHT) ||
-            ball->xspd > 0 && IsKeyDown(KEY_LEFT);
+            (ball->xspd < 0 && IsKeyDown(KEY_RIGHT)) ||
+            (ball->xspd > 0 && IsKeyDown(KEY_LEFT));
 
         if (ball_and_paddle_direction_opposite) {
             ball->xspd = -ball->xspd;
@@ -457,9 +452,7 @@ void update_game_paddle(void) {
 }
 
 void update_game_ball(void) {
-    Paddle* paddle = &gs->paddle;
     Ball* ball = &gs->ball;
-    Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     // ball update logic
     if (ball->xspd > 0) {
@@ -512,7 +505,6 @@ void update_game_ball(void) {
 }
 
 void update_game_bricks(void) {
-    Paddle* paddle = &gs->paddle;
     Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
@@ -564,27 +556,20 @@ void update_game_bricks(void) {
 }
 
 void update_dead(void) {
-    if (IsKeyPressed(KEY_R)) {
+    if (IsKeyPressed(KEY_R) || IsKeyPressed(KEY_ENTER) ||
+        IsKeyPressed(KEY_SPACE)) {
         reset_game();
         s.screen = SCR_GAME;
     }
 
-    if (IsKeyPressed(KEY_T)) {
+    if (IsKeyPressed(KEY_T) || IsKeyPressed(KEY_ESCAPE)) {
         reset_title();
         s.screen = SCR_TITLE;
     }
 }
 
 void update_win(void) {
-    if (IsKeyPressed(KEY_R)) {
-        reset_game();
-        s.screen = SCR_GAME;
-    }
-
-    if (IsKeyPressed(KEY_T)) {
-        reset_title();
-        s.screen = SCR_TITLE;
-    }
+    update_dead(); // update tasks are identical anyway
 }
 
 void update_title(void) {
@@ -609,14 +594,11 @@ void update_title(void) {
     }
 }
 
-void update_settings(void) { return update_dead(); }
+void update_settings(void) { update_dead(); }
 
 void update_game(void) {
     Paddle* paddle = &gs->paddle;
     Ball* ball = &gs->ball;
-
-    // funny raylib CheckCollisionCircleRec shit
-    Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     double paddle_speed_offset =
         (double)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd)) / 5;
@@ -750,7 +732,6 @@ int main(void) {
         maxscore += NUM_BRICKS * i;
     }
 
-    State s = {0};
     reset_state();
 
     while (!should_close) {
