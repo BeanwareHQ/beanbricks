@@ -49,6 +49,7 @@ const int BRICK_COLORS[] = {
 #define TXT_PRIMARY_COLOR   0xffffff
 #define TXT_SECONDARY_COLOR 0xf5f5f5
 #elif THEME == THEME_CTP_MOCHA
+static void LoadRayguiStyle(void) { return; }
 // mocha
 const int BRICK_COLORS[] = {
     [1] = 0xf38ba8, [2] = 0xfab387, [3] = 0xf9e2af, [4] = 0xa6e3a1,
@@ -58,6 +59,9 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x9399b2
 #define TXT_PRIMARY_COLOR   0xcdd6f4
 #define TXT_SECONDARY_COLOR 0xbac2de
+#include "assets/catppuccinmochamauve.h"
+extern void GuiLoadStyleCatppuccinMochaMauve(void);
+static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinMochaMauve(); }
 #elif THEME == THEME_CTP_MACCHIATO
 // macchiato
 const int BRICK_COLORS[] = {
@@ -68,6 +72,9 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x939ab7
 #define TXT_PRIMARY_COLOR   0xcad3f5
 #define TXT_SECONDARY_COLOR 0xb8c0e0
+#include "assets/catppuccinmacchiatosapphire.h"
+extern void GuiLoadStyleCatppuccinMacchiatoSapphire(void);
+static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinMacchiatoSapphire(); }
 #elif THEME == THEME_CTP_FRAPPE
 // frappe
 const int BRICK_COLORS[] = {
@@ -77,6 +84,9 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x949cbb
 #define TXT_PRIMARY_COLOR   0xc6d0f5
 #define TXT_SECONDARY_COLOR 0xb5bfe2
+#include "assets/catppuccinfrappesapphire.h"
+extern void GuiLoadStyleCatppuccinFrappeSapphire(void);
+static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinFrappeSapphire(); }
 #elif THEME == THEME_CTP_LATTE
 // frappe
 const int BRICK_COLORS[] = {
@@ -87,6 +97,9 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x6c6f85
 #define TXT_PRIMARY_COLOR   0x4c4f69
 #define TXT_SECONDARY_COLOR 0x4c4f69
+#include "assets/catppuccinlattesapphire.h"
+extern void GuiLoadStyleCatppuccinLatteSapphire(void);
+static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinLatteSapphire(); }
 #else
 const int BRICK_COLORS[] = {
     [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
@@ -96,6 +109,7 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x828282
 #define TXT_PRIMARY_COLOR   0x000000
 #define TXT_SECONDARY_COLOR 0x505050
+static void LoadRayguiStyle(void) { return; }
 #endif
 
 typedef struct {
@@ -131,12 +145,19 @@ typedef struct {
     Rectangle exit_overlay_yes_button;
     Rectangle exit_overlay_no_button;
     bool draw;
-} GameHudGui;
+} GameGui;
+
+typedef struct {
+    Rectangle title_button;
+    Rectangle restart_button;
+    Rectangle quit_button;
+    bool draw;
+} WinDeadGui; // GUI elements displayed on the death and win screens
 
 typedef struct {
     Paddle paddle;
     Ball ball;
-    GameHudGui hud;
+    GameGui gui;
     int score;
     int bricks_broken; // HUD
     int paddle_speed;
@@ -153,6 +174,7 @@ typedef struct {
 typedef struct {
     GameState game;
     TitleScreenState title_screen;
+    WinDeadGui win_dead_gui;
     Screen screen;
 } State;
 
@@ -236,8 +258,8 @@ void draw_game_hud_right(void) {
     const int BAR_WIDTH = 150;
     int BAR_X = WINWIDTH - BAR_WIDTH - 20;
 
-    if (gs->hud.draw) {
-        BAR_X -= gs->hud.quit_button.width;
+    if (gs->gui.draw) {
+        BAR_X -= gs->gui.quit_button.width;
         BAR_X -= 10;
     }
 
@@ -287,50 +309,57 @@ void draw_game_hud_right(void) {
 }
 
 void draw_game_gui(void) {
-    if (GuiButton(gs->hud.quit_button, GuiIconText(ICON_EXIT, "Quit"))) {
+    if (GuiButton(gs->gui.quit_button, GuiIconText(ICON_EXIT, "Quit"))) {
         gs->exit_overlay = true;
+    }
+}
+
+void draw_win_or_dead_gui(void) {
+    if (GuiButton(s.win_dead_gui.restart_button,
+                  GuiIconText(ICON_REPEAT_FILL, "[R]estart"))) {
+        reset_game();
+        s.screen = SCR_GAME;
+    } else if (GuiButton(s.win_dead_gui.title_button,
+                         GuiIconText(ICON_HOUSE, "[T]itle Screen"))) {
+        reset_title();
+        s.screen = SCR_TITLE;
+    } else if (GuiButton(s.win_dead_gui.quit_button,
+                         GuiIconText(ICON_EXIT, "[Q]uit"))) {
+        should_close = true;
     }
 }
 
 void draw_dead(void) {
     const char* death_txt = "Game over!";
-    const char* reset_txt = "Press <r> to restart, <t> for title screen";
     const int death_txtsz = 100;
-    const int reset_txtsz = 20;
 
     int death_width = MeasureText(death_txt, death_txtsz);
-    int reset_width = MeasureText(reset_txt, reset_txtsz);
 
     int death_posx = (WINWIDTH / 2) - death_width / 2;
     int death_posy = (WINHEIGHT / 2) - death_txtsz / 2;
-    int reset_posx = (WINWIDTH / 2) - reset_width / 2;
 
     DrawText(death_txt, death_posx, death_posy, death_txtsz,
              color(TXT_PRIMARY_COLOR));
-    DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
-             color(TXT_SECONDARY_COLOR));
+
     draw_game_hud_left();
     draw_game_hud_right();
+    draw_win_or_dead_gui();
 }
 
 void draw_win(void) {
     const char* win_txt = "You won!";
-    const char* reset_txt = "Press <r> to restart, <t> for title screen";
     const int win_txtsz = 100;
-    const int reset_txtsz = 20;
 
     int win_width = MeasureText(win_txt, win_txtsz);
-    int reset_width = MeasureText(reset_txt, reset_txtsz);
 
     int win_posx = (WINWIDTH / 2) - win_width / 2;
     int win_posy = (WINHEIGHT / 2) - win_txtsz / 2;
-    int reset_posx = (WINWIDTH / 2) - reset_width / 2;
 
     DrawText(win_txt, win_posx, win_posy, win_txtsz, color(TXT_PRIMARY_COLOR));
-    DrawText(reset_txt, reset_posx, WINHEIGHT - reset_txtsz - 20, 20,
-             color(TXT_SECONDARY_COLOR));
+
     draw_game_hud_left();
     draw_game_hud_right();
+    draw_win_or_dead_gui();
 }
 
 void draw_title(void) {
@@ -396,16 +425,16 @@ void draw_game(void) {
         int exit_posx = (WINWIDTH / 2) - exit_width / 2;
         int exit_posy = (WINHEIGHT / 2) - exit_txtsz / 2;
 
-        if (GuiButton(gs->hud.exit_overlay_yes_button,
-                      GuiIconText(ICON_OK_TICK, "Yes"))) {
+        if (GuiButton(gs->gui.exit_overlay_yes_button,
+                      GuiIconText(ICON_OK_TICK, "[Y]es"))) {
             s.screen = SCR_TITLE;
             reset_title();
             reset_game();
             return;
         }
 
-        if (GuiButton(gs->hud.exit_overlay_no_button,
-                      GuiIconText(ICON_CROSS, "No"))) {
+        if (GuiButton(gs->gui.exit_overlay_no_button,
+                      GuiIconText(ICON_CROSS, "[N]o"))) {
             gs->exit_overlay = false; // back
             return;
         }
@@ -612,6 +641,10 @@ void update_dead(void) {
         reset_title();
         s.screen = SCR_TITLE;
     }
+
+    if (IsKeyPressed(KEY_Q)) {
+        should_close = true;
+    }
 }
 
 void update_win(void) {
@@ -700,7 +733,7 @@ void update_game(void) {
 }
 
 void update(void) {
-    gs->hud.draw = (s.screen == SCR_GAME);
+    gs->gui.draw = (s.screen == SCR_GAME);
 
     switch (s.screen) {
         case SCR_GAME: {
@@ -750,14 +783,14 @@ void reset_game(void) {
     };
 
     const int QUIT_BUTTON_WIDTH = 60;
-    const int EXIT_OVERLAY_BUTTON_WIDTH = 60;
+    const int EXIT_OVERLAY_BUTTON_WIDTH = 80;
     const int EXIT_OVERLAY_BTNS_WIDTH =
         2 * EXIT_OVERLAY_BUTTON_WIDTH + 10; // + padding
 
     const int EXIT_OVERLAY_BUTTONS_BEGIN =
         (int)(WINWIDTH / 2 - EXIT_OVERLAY_BTNS_WIDTH / 2);
 
-    gs->hud = (GameHudGui){
+    gs->gui = (GameGui){
         .quit_button = (Rectangle){.x = WINWIDTH - 20 - QUIT_BUTTON_WIDTH,
                                    .y = 20,
                                    .width = QUIT_BUTTON_WIDTH,
@@ -777,6 +810,27 @@ void reset_game(void) {
     make_bricks();
 }
 
+void reset_win_or_dead_gui(void) {
+    const int BUTTON_WIDTH = 120;
+    const int BUTTONS_WIDTH = 3 * BUTTON_WIDTH + 20; // + 2*padding
+    const int BUTTONS_BEGIN = (int)(WINWIDTH / 2 - BUTTONS_WIDTH / 2);
+
+    s.win_dead_gui = (WinDeadGui){
+        .restart_button = (Rectangle){.x = BUTTONS_BEGIN,
+                                      .y = WINHEIGHT - 40,
+                                      .width = BUTTON_WIDTH,
+                                      .height = 30},
+        .title_button = (Rectangle){.x = BUTTONS_BEGIN + BUTTON_WIDTH + 10,
+                                      .y = WINHEIGHT - 40,
+                                      .width = BUTTON_WIDTH,
+                                      .height = 30},
+        .quit_button = (Rectangle){.x = BUTTONS_BEGIN + 2 * BUTTON_WIDTH + 20,
+                                      .y = WINHEIGHT - 40,
+                                      .width = BUTTON_WIDTH,
+                                      .height = 30},
+    };
+}
+
 void reset_title(void) {
     *tss = (TitleScreenState){
         .title_anim_stage = 1,
@@ -793,6 +847,7 @@ void reset_state(void) {
 
     reset_game();
     reset_title();
+    reset_win_or_dead_gui();
 }
 
 int main(void) {
@@ -804,6 +859,8 @@ int main(void) {
     for (int i = 1; i <= LAYERS; i++) {
         maxscore += NUM_BRICKS * i;
     }
+
+    LoadRayguiStyle();
 
     reset_state();
 
