@@ -1,15 +1,23 @@
 CC = cc
+INCLUDE = -I./3rdparty/include
 LIBS = $(shell pkg-config --cflags --libs raylib) -lm
-CFLAGS = -O2 -Wall -Wpedantic -march=native -flto=auto $(LIBS)
+CFLAGS = -O2 -Wall -Wpedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
 OBJ = brickout.o
 
-brickout: mksettings $(OBJ)
+brickout: deps mksettings $(OBJ)
 	$(CC) $(CFLAGS) -o brickout $(OBJ)
 
 mksettings:
 	test -f settings.h || make defaults
 
 brickout.o: settings.h
+
+deps:
+	test -f 3rdparty/include/raygui.h || curl -fL -o 3rdparty/include/raygui.h https://raw.githubusercontent.com/raysan5/raygui/refs/heads/master/src/raygui.h
+
+updatedeps:
+	rm -f 3rdparty/include/raygui.h 
+	make deps
 
 tarball:
 	mkdir brickout
@@ -23,6 +31,7 @@ defaults:
 
 clean:
 	rm -rf brickout brickout.tar.gz brickout $(OBJ)
+	rm -f 3rdparty/include/*
 
 cleanall: clean defaults
 

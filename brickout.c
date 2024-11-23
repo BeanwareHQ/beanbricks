@@ -17,6 +17,9 @@
 
 #include "settings.h"
 
+#define RAYGUI_IMPLEMENTATION
+#include "3rdparty/include/raygui.h"
+
 #define VERSION "0.1.0-pre"
 
 // color is a hex code, rgb
@@ -124,8 +127,16 @@ typedef enum {
 } Screen;
 
 typedef struct {
+    Rectangle quit_button;
+    Rectangle exit_overlay_yes_button;
+    Rectangle exit_overlay_no_button;
+    bool draw;
+} GameHudGui;
+
+typedef struct {
     Paddle paddle;
     Ball ball;
+    GameHudGui hud;
     int score;
     int bricks_broken; // HUD
     int paddle_speed;
@@ -223,7 +234,13 @@ void draw_game_hud_right(void) {
     char buf[10] = {0};
 
     const int BAR_WIDTH = 150;
-    const int BAR_X = WINWIDTH - BAR_WIDTH - 20;
+    int BAR_X = WINWIDTH - BAR_WIDTH - 20;
+
+    if (gs->hud.draw) {
+        BAR_X -= gs->hud.quit_button.width;
+        BAR_X -= 10;
+    }
+
     const double FRAC_BROKEN =
         (double)gs->bricks_broken / (LAYERS * NUM_BRICKS);
     const double PERCENT_BROKEN = FRAC_BROKEN * 100;
@@ -267,6 +284,12 @@ void draw_game_hud_right(void) {
     DrawRectangleRec(background, color(BG_COLOR));
     DrawRectangleRec(filling, bar_color);
     DrawText(buf, BAR_X - TEXT_WIDTH - 10, 20, 20, color(TXT_PRIMARY_COLOR));
+}
+
+void draw_game_gui(void) {
+    if (GuiButton(gs->hud.quit_button, GuiIconText(ICON_EXIT, "Quit"))) {
+        gs->exit_overlay = true;
+    }
 }
 
 void draw_dead(void) {
@@ -373,17 +396,28 @@ void draw_game(void) {
         int exit_posx = (WINWIDTH / 2) - exit_width / 2;
         int exit_posy = (WINHEIGHT / 2) - exit_txtsz / 2;
 
-        const char* confirm = "<y> for yes, <n> for no";
-        const int confirm_txtsz = 20;
-        int confirm_width = MeasureText(confirm, confirm_txtsz);
-        int confirm_posx = (WINWIDTH / 2) - confirm_width / 2;
-        int confirm_posy = WINHEIGHT - confirm_txtsz - 20;
+        if (GuiButton(gs->hud.exit_overlay_yes_button,
+                      GuiIconText(ICON_OK_TICK, "Yes"))) {
+            s.screen = SCR_TITLE;
+            reset_title();
+            reset_game();
+            return;
+        }
+
+        if (GuiButton(gs->hud.exit_overlay_no_button,
+                      GuiIconText(ICON_CROSS, "No"))) {
+            gs->exit_overlay = false; // back
+            return;
+        }
 
         DrawText(exit, exit_posx, exit_posy, exit_txtsz,
                  color(TXT_PRIMARY_COLOR));
-        DrawText(confirm, confirm_posx, confirm_posy, confirm_txtsz,
-                 color(TXT_SECONDARY_COLOR));
     }
+
+    if (gs->exit_overlay || gs->paused)
+        return;
+
+    draw_game_gui();
 }
 
 void draw(void) {
@@ -666,6 +700,8 @@ void update_game(void) {
 }
 
 void update(void) {
+    gs->hud.draw = (s.screen == SCR_GAME);
+
     switch (s.screen) {
         case SCR_GAME: {
             update_game();
@@ -711,6 +747,31 @@ void reset_game(void) {
                      .yspd = yspd,
                      .color = GRAY,
                      },
+    };
+
+    const int QUIT_BUTTON_WIDTH = 60;
+    const int EXIT_OVERLAY_BUTTON_WIDTH = 60;
+    const int EXIT_OVERLAY_BTNS_WIDTH =
+        2 * EXIT_OVERLAY_BUTTON_WIDTH + 10; // + padding
+
+    const int EXIT_OVERLAY_BUTTONS_BEGIN =
+        (int)(WINWIDTH / 2 - EXIT_OVERLAY_BTNS_WIDTH / 2);
+
+    gs->hud = (GameHudGui){
+        .quit_button = (Rectangle){.x = WINWIDTH - 20 - QUIT_BUTTON_WIDTH,
+                                   .y = 20,
+                                   .width = QUIT_BUTTON_WIDTH,
+                                   .height = 19},
+        .exit_overlay_no_button =
+            (Rectangle){.x = EXIT_OVERLAY_BUTTONS_BEGIN,
+                                   .y = WINHEIGHT - 40,
+                                   .width = EXIT_OVERLAY_BUTTON_WIDTH,
+                                   .height = 30},
+        .exit_overlay_yes_button = (Rectangle){
+                                   .x = EXIT_OVERLAY_BUTTONS_BEGIN + EXIT_OVERLAY_BUTTON_WIDTH + 10,
+                                   .y = WINHEIGHT - 40,
+                                   .width = EXIT_OVERLAY_BUTTON_WIDTH,
+                                   .height = 30}
     };
 
     make_bricks();
