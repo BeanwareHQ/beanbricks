@@ -21,7 +21,8 @@
 #define RAYGUI_IMPLEMENTATION
 #include "3rdparty/include/raygui.h"
 
-#define VERSION "0.1.0"
+#define VERSION "0.2.0-pre"
+
 #define HELP                                                                   \
     "\033[1mbrickout: a questionable brick-out/breakout clone in C and "       \
     "raylib.\033[0m\n\n"                                                       \
