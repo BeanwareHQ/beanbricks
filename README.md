@@ -26,14 +26,14 @@ Go through the options and comments found in `settings.h`. Change the `#define`s
 
 * Difficulty levels
 * Proper settings
- * Theme
- * Difficulty
- * Layers
- * Paddle Speed
- * Debug Info
- * Ball radius
- * Brick width
- * Brick height
- * Global Speed
+  * Theme
+  * Difficulty
+  * Layers
+  * Paddle Speed
+  * Debug Info
+  * Ball radius
+  * Brick width
+  * Brick height
+  * Global Speed
 * Leaderboard
 * GUI based menus
