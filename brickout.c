@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "settings.h"
@@ -20,7 +21,21 @@
 #define RAYGUI_IMPLEMENTATION
 #include "3rdparty/include/raygui.h"
 
-#define VERSION "0.1.0-pre"
+#define VERSION "0.1.0"
+#define HELP                                                                   \
+    "\033[1mbrickout: a questionable brick-out/breakout clone in C and "       \
+    "raylib.\033[0m\n\n"                                                       \
+    "Copyright (c) Eason Qin <eason@ezntek.com>, 2024.\n"                      \
+    "This program and all source code in the project directory including "     \
+    "this file is licensed under the MIT/Expat license; unless otherwise "     \
+    "stated.\n"                                                                \
+    "View the full text of the license in the root of the project, or pass "   \
+    "--license."                                                               \
+    "usage: brickout [flags]\n"                                                \
+    "running the program with no args will launch the game.\n\n"               \
+    "options:\n"                                                               \
+    "    --help: show this help screen\n"                                      \
+    "    --version: show the version of the program\n"
 
 // color is a hex code, rgb
 Color color(int color) {
@@ -932,7 +947,20 @@ void reset_all(void) {
     reset_win_or_dead_gui();
 }
 
-int main(void) {
+int main(int argc, char** argv) {
+    argc--;
+    argv++;
+
+    if (argc > 0) {
+        if (!strcmp(argv[0], "--version")) {
+            printf("brickout version " VERSION "\n");
+            exit(EXIT_SUCCESS);
+        } else if (!strcmp(argv[0], "--help")) {
+            printf(HELP);
+            exit(EXIT_SUCCESS);
+        }
+    }
+
     InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
     SetTargetFPS((int)(60 / (1 / SPEED)));
     srand(time(NULL));

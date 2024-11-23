@@ -4,6 +4,8 @@ LIBS = $(shell pkg-config --cflags --libs raylib) -lm
 CFLAGS = -O2 -Wall -Wpedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
 OBJ = brickout.o
 
+TARBALLFILES = Makefile LICENSE.md README.md brickout.c settings.def.h 3rdparty assets
+
 brickout: deps mksettings $(OBJ)
 	$(CC) $(CFLAGS) -o brickout $(OBJ)
 
@@ -20,9 +22,9 @@ updatedeps:
 	rm -f 3rdparty/include/raygui.h 
 	make deps
 
-tarball:
-	mkdir brickout
-	cp LICENSE.md README.md brickout.c settings.h brickout/
+tarball: deps
+	mkdir -p brickout
+	cp -rv $(TARBALLFILES) brickout/
 	tar czvf brickout.tar.gz brickout
 	rm -rf brickout
 

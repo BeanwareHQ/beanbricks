@@ -5,6 +5,7 @@ A questionable brick-out/breakout clone in C and Raylib.
 ## Dependencies
 
  * Raylib
+ * Raygui (bundled)
 
 ## Building
 
@@ -18,7 +19,7 @@ A questionable brick-out/breakout clone in C and Raylib.
 
  * `make tarball`
 
-## Changing Settings
+## Configuring
 
 Go through the options and comments found in `settings.h`. Change the `#define`s as you wish, and recompile by running `make`.
 
