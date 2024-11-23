@@ -13,7 +13,8 @@ mksettings:
 brickout.o: settings.h
 
 deps:
-	test -f 3rdparty/include/raygui.h || curl -fL -o 3rdparty/include/raygui.h https://raw.githubusercontent.com/raysan5/raygui/refs/heads/master/src/raygui.h
+	mkdir -p 3rdparty/include
+	test -f 3rdparty/include/raygui.h || curl -fL -o 3rdparty/include/raygui.h https://raw.githubusercontent.com/raysan5/raygui/25c8c65a6e5f0f4d4b564a0343861898c6f2778b/src/raygui.h
 
 updatedeps:
 	rm -f 3rdparty/include/raygui.h 
