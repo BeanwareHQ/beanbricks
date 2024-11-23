@@ -805,13 +805,22 @@ void update(void) {
 }
 
 void reset_game(void) {
-    const int max_xspd = 4;
-    const int min_xspd = 2;
-    const int max_yspd = 6;
-    const int min_yspd = 3;
+    int xspd;
+    int yspd;
 
-    int xspd = rand() % (max_xspd - min_xspd + 1) + min_xspd;
-    int yspd = rand() % (max_yspd - min_yspd - 2) + min_yspd;
+    // TODO: fix disgusting code (add difficulty levels)
+    const int speed_decider = rand() % 3;
+
+    if (speed_decider == 0) {
+        xspd = 3;
+        yspd = 4;
+    } else if (speed_decider == 1) {
+        xspd = 4;
+        yspd = 3;
+    } else if (speed_decider == 2) {
+        xspd = 3;
+        yspd = 3;
+    }
 
     if (rand() % 2 == 0) {
         xspd = -xspd;
