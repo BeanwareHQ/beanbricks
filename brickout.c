@@ -220,41 +220,53 @@ void draw_game_hud_left(void) {
 }
 
 void draw_game_hud_right(void) {
-    const int WIDTH = 150;
-    char buf[10];
+    char buf[10] = {0};
 
-    sprintf(buf, "%.01lf%%",
-            (double)gs->bricks_broken * 100 / (LAYERS * NUM_BRICKS));
+    const int BAR_WIDTH = 150;
+    const int BAR_X = WINWIDTH - BAR_WIDTH - 20;
+    const double FRAC_BROKEN =
+        (double)gs->bricks_broken / (LAYERS * NUM_BRICKS);
+    const double PERCENT_BROKEN = FRAC_BROKEN * 100;
+    Color bar_color;
 
-    const int BAR_WIDTH = WINWIDTH - WIDTH - 20;
+    snprintf(buf, sizeof(buf), "%.01lf%%", PERCENT_BROKEN);
     const int TEXT_WIDTH = MeasureText(buf, 20);
 
+    if (PERCENT_BROKEN < 25) {
+        bar_color = color(BRICK_COLORS[1]); // red
+    } else if (PERCENT_BROKEN < 60) {
+        bar_color = color(BRICK_COLORS[3]); // yellow
+    } else if (PERCENT_BROKEN < 80) {
+        bar_color = color(BRICK_COLORS[4]); // green
+    } else {
+        bar_color = color(BRICK_COLORS[5]); // blue
+    }
+
     const Rectangle border = {
-        BAR_WIDTH, // - width - padding,
+        BAR_X, // - width - padding,
         20,
-        WIDTH,
+        BAR_WIDTH,
         18,
     };
 
     const Rectangle background = {
-        BAR_WIDTH + 2, // padding
-        22,            // 20 + 2
-        WIDTH - 4,
+        BAR_X + 2, // padding
+        22,        // 20 + 2
+        BAR_WIDTH - 4,
         14, // 18 - 4
     };
 
     const Rectangle filling = {
-        BAR_WIDTH + 2, // padding
-        22,            // 20 + 2
-        (int)(WIDTH * gs->bricks_broken / (LAYERS * NUM_BRICKS)),
+        BAR_X + 2, // padding
+        22,        // 20 + 2
+        (int)((BAR_WIDTH - 4) * FRAC_BROKEN),
         14, // 18 - 4
     };
 
     DrawRectangleRec(border, color(TXT_PRIMARY_COLOR));
     DrawRectangleRec(background, color(BG_COLOR));
-    DrawRectangleRec(filling, color(BRICK_COLORS[1]));
-    DrawText(buf, BAR_WIDTH - TEXT_WIDTH - 10, 20, 20,
-             color(TXT_PRIMARY_COLOR));
+    DrawRectangleRec(filling, bar_color);
+    DrawText(buf, BAR_X - TEXT_WIDTH - 10, 20, 20, color(TXT_PRIMARY_COLOR));
 }
 
 void draw_dead(void) {
