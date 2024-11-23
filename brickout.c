@@ -151,8 +151,12 @@ typedef struct {
     Rectangle title_button;
     Rectangle restart_button;
     Rectangle quit_button;
-    bool draw;
-} WinDeadGui; // GUI elements displayed on the death and win screens
+} WinDeadGui; // GUI elements displayed on both the death and win screens
+
+typedef struct {
+    Rectangle start_button;
+    Rectangle quit_button;
+} TitleScreenGui;
 
 typedef struct {
     Paddle paddle;
@@ -167,6 +171,7 @@ typedef struct {
 } GameState;
 
 typedef struct {
+    TitleScreenGui gui;
     int title_anim_stage;
     bool title_anim_growing;
 } TitleScreenState;
@@ -191,10 +196,39 @@ TitleScreenState* const tss = &s.title_screen;
 
 bool should_close = false;
 
-// Reset the state of the game
-void reset_state(void);
+// get an offset for the ball when bouncing on certain surfaces.
+int get_bounce_offset(const Ball* ball);
+
+// Populates the bricks.
+void make_bricks(void);
+
+void draw_game_bricks(void);
+void draw_game_hud_left(void);
+void draw_game_hud_right(void);
+void draw_game_gui(void);
+void draw_win_or_dead_gui(void);
+void draw_dead(void);
+void draw_win(void);
+void draw_titlescreen(void);
+void draw_titlescreen_gui(void);
+void draw_settings(void);
+void draw_game(void);
+void draw(void);
+
+void update_game_paddle(void);
+void update_game_ball(void);
+void update_game_bricks(void);
+void update_dead(void);
+void update_win(void);
+void update_titlescreen(void);
+void update_settings(void);
+void update_game(void);
+void update(void);
+
 void reset_game(void);
-void reset_title(void);
+void reset_win_or_dead_gui(void);
+void reset_titlescreen(void);
+void reset_all(void);
 
 int get_bounce_offset(const Ball* ball) {
     double avg =
@@ -321,7 +355,7 @@ void draw_win_or_dead_gui(void) {
         s.screen = SCR_GAME;
     } else if (GuiButton(s.win_dead_gui.title_button,
                          GuiIconText(ICON_HOUSE, "[T]itle Screen"))) {
-        reset_title();
+        reset_titlescreen();
         s.screen = SCR_TITLE;
     } else if (GuiButton(s.win_dead_gui.quit_button,
                          GuiIconText(ICON_EXIT, "[Q]uit"))) {
@@ -362,7 +396,7 @@ void draw_win(void) {
     draw_win_or_dead_gui();
 }
 
-void draw_title(void) {
+void draw_titlescreen(void) {
     const char* title = "Brick-out";
     int title_txtsz;
 
@@ -376,7 +410,7 @@ void draw_title(void) {
     int title_posx = (WINWIDTH / 2) - title_width / 2;
     int title_posy = WINHEIGHT * 0.16;
 
-    const char* begin = "press enter to begin";
+    const char* begin = "or press enter to begin";
     const int begin_txtsz = 20;
     int begin_width = MeasureText(begin, begin_txtsz);
     int begin_posx = (WINWIDTH / 2) - begin_width / 2;
@@ -390,6 +424,21 @@ void draw_title(void) {
     DrawText("Copyright (c) Eason Qin <eason@ezntek.com>, 2024", 20, 20, 10,
              color(TXT_SECONDARY_COLOR));
     DrawText("version " VERSION, 20, 34, 10, color(TXT_SECONDARY_COLOR));
+
+    draw_titlescreen_gui();
+}
+
+void draw_titlescreen_gui(void) {
+    if (GuiButton(tss->gui.start_button,
+                  GuiIconText(ICON_PLAYER_PLAY, "[P]lay"))) {
+        reset_game();
+        s.screen = SCR_GAME;
+    }
+
+    if (GuiButton(tss->gui.quit_button, GuiIconText(ICON_EXIT, "[Q]uit"))) {
+        should_close = true;
+        return;
+    }
 }
 
 void draw_settings(void) { draw_dead(); }
@@ -423,12 +472,13 @@ void draw_game(void) {
         const int exit_txtsz = 60;
         int exit_width = MeasureText(exit, exit_txtsz);
         int exit_posx = (WINWIDTH / 2) - exit_width / 2;
-        int exit_posy = (WINHEIGHT / 2) - exit_txtsz / 2;
+        int exit_posy =
+            (WINHEIGHT / 2) - 60; // exit_txtsz + padding + buttons = 120
 
         if (GuiButton(gs->gui.exit_overlay_yes_button,
                       GuiIconText(ICON_OK_TICK, "[Y]es"))) {
             s.screen = SCR_TITLE;
-            reset_title();
+            reset_titlescreen();
             reset_game();
             return;
         }
@@ -461,7 +511,7 @@ void draw(void) {
             draw_win();
         } break;
         case SCR_TITLE: {
-            draw_title();
+            draw_titlescreen();
         } break;
         case SCR_SETTINGS: {
             draw_settings();
@@ -638,7 +688,7 @@ void update_dead(void) {
     }
 
     if (IsKeyPressed(KEY_T) || IsKeyPressed(KEY_ESCAPE)) {
-        reset_title();
+        reset_titlescreen();
         s.screen = SCR_TITLE;
     }
 
@@ -651,13 +701,13 @@ void update_win(void) {
     update_dead(); // update tasks are identical anyway
 }
 
-void update_title(void) {
+void update_titlescreen(void) {
     if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
         should_close = true;
         return;
     }
 
-    if (IsKeyPressed(KEY_ENTER) != 0) {
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_P)) {
         reset_game();
         s.screen = SCR_GAME;
     }
@@ -719,7 +769,7 @@ void update_game(void) {
             gs->exit_overlay = false; // back
         } else if (IsKeyPressed(KEY_Y)) {
             s.screen = SCR_TITLE;
-            reset_title();
+            reset_titlescreen();
             reset_game();
             return;
         }
@@ -746,7 +796,7 @@ void update(void) {
             update_win();
         } break;
         case SCR_TITLE: {
-            update_title();
+            update_titlescreen();
         } break;
         case SCR_SETTINGS: {
             update_settings();
@@ -787,6 +837,7 @@ void reset_game(void) {
     const int EXIT_OVERLAY_BTNS_WIDTH =
         2 * EXIT_OVERLAY_BUTTON_WIDTH + 10; // + padding
 
+    const int EXIT_OVERLAY_BTNS_Y = (WINHEIGHT / 2) + 30; // padding
     const int EXIT_OVERLAY_BUTTONS_BEGIN =
         (int)(WINWIDTH / 2 - EXIT_OVERLAY_BTNS_WIDTH / 2);
 
@@ -797,12 +848,12 @@ void reset_game(void) {
                                    .height = 19},
         .exit_overlay_no_button =
             (Rectangle){.x = EXIT_OVERLAY_BUTTONS_BEGIN,
-                                   .y = WINHEIGHT - 40,
+                                   .y = EXIT_OVERLAY_BTNS_Y,
                                    .width = EXIT_OVERLAY_BUTTON_WIDTH,
                                    .height = 30},
         .exit_overlay_yes_button = (Rectangle){
                                    .x = EXIT_OVERLAY_BUTTONS_BEGIN + EXIT_OVERLAY_BUTTON_WIDTH + 10,
-                                   .y = WINHEIGHT - 40,
+                                   .y = EXIT_OVERLAY_BTNS_Y,
                                    .width = EXIT_OVERLAY_BUTTON_WIDTH,
                                    .height = 30}
     };
@@ -831,14 +882,36 @@ void reset_win_or_dead_gui(void) {
     };
 }
 
-void reset_title(void) {
+void reset_titlescreen(void) {
     *tss = (TitleScreenState){
         .title_anim_stage = 1,
         .title_anim_growing = true,
     };
+
+    const int BUTTON_WIDTH = 120;
+    const int BUTTONS_WIDTH = 2 * BUTTON_WIDTH + 10; // + padding
+    const int BUTTONS_BEGIN = (int)(WINWIDTH / 2 - BUTTONS_WIDTH / 2);
+
+    const int TITLESCREEN_TEXT_Y = WINHEIGHT * 0.16; // check draw_titlescreen
+
+    tss->gui = (TitleScreenGui){
+        .start_button =
+            (Rectangle){
+                        .x = BUTTONS_BEGIN,
+                        .y = TITLESCREEN_TEXT_Y + 140,
+                        .width = BUTTON_WIDTH,
+                        .height = 30,
+                        },
+        .quit_button = (Rectangle){
+                        .x = BUTTONS_BEGIN + BUTTON_WIDTH + 10,
+                        .y = TITLESCREEN_TEXT_Y + 140,
+                        .width = BUTTON_WIDTH,
+                        .height = 30,
+                        }
+    };
 }
 
-void reset_state(void) {
+void reset_all(void) {
     srand(time(NULL));
 
     s = (State){
@@ -846,7 +919,7 @@ void reset_state(void) {
     };
 
     reset_game();
-    reset_title();
+    reset_titlescreen();
     reset_win_or_dead_gui();
 }
 
@@ -862,7 +935,7 @@ int main(void) {
 
     LoadRayguiStyle();
 
-    reset_state();
+    reset_all();
 
     while (!should_close) {
         if (WindowShouldClose() || should_close)
