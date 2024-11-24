@@ -37,4 +37,3 @@ Go through the options and comments found in `settings.h`. Change the `#define`s
   * Brick height
   * Global Speed
 * Leaderboard
-* GUI based menus
