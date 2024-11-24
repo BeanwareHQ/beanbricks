@@ -21,7 +21,8 @@
 #define RAYGUI_IMPLEMENTATION
 #include "3rdparty/include/raygui.h"
 
-#define VERSION "0.1.0"
+#define VERSION "0.1.1-pre"
+
 #define HELP                                                                   \
     "\033[1mbrickout: a questionable brick-out/breakout clone in C and "       \
     "raylib.\033[0m\n\n"                                                       \
@@ -244,6 +245,8 @@ void reset_game(void);
 void reset_win_or_dead_gui(void);
 void reset_titlescreen(void);
 void reset_all(void);
+
+void calculate_maxscore(void);
 
 int get_bounce_offset(const Ball* ball) {
     double avg =
@@ -947,6 +950,12 @@ void reset_all(void) {
     reset_win_or_dead_gui();
 }
 
+void calculate_maxscore(void) {
+    for (int i = 1; i <= LAYERS; i++) {
+        maxscore += NUM_BRICKS * i;
+    }
+}
+
 int main(int argc, char** argv) {
     argc--;
     argv++;
@@ -961,17 +970,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
+    InitWindow(WINWIDTH, WINHEIGHT, "brick-out");
     SetTargetFPS((int)(60 / (1 / SPEED)));
     srand(time(NULL));
     SetExitKey(KEY_NULL);
 
-    for (int i = 1; i <= LAYERS; i++) {
-        maxscore += NUM_BRICKS * i;
-    }
-
     LoadRayguiStyle();
-
+    calculate_maxscore();
     reset_all();
 
     while (!should_close) {

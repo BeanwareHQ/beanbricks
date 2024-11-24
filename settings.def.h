@@ -23,7 +23,7 @@ typedef enum {
 
 // --- Configuration Options---
 #define WINWIDTH             600 // Window Width
-#define WINHEIGHT            800 // Window Height
+#define WINHEIGHT            700 // Window Height
 #define PADDLE_WIDTH         100 // Paddle Width
 #define PADDLE_HEIGHT        20  // Paddle Height
 #define INITIAL_PADDLE_SPEED 6   // Paddle Speed
