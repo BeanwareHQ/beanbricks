@@ -1,6 +1,6 @@
 ## brickout.c
 
-A questionable brick-out/breakout clone in C and Raylib.
+A single-file breakout clone in C and Raylib.
 
 ## Dependencies
 
@@ -37,4 +37,3 @@ Go through the options and comments found in `settings.h`. Change the `#define`s
   * Brick height
   * Global Speed
 * Leaderboard
-* GUI based menus

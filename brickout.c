@@ -7,14 +7,17 @@
  * the full license text in the root of the project.
  */
 
-#include <math.h>
-#include <raylib.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <math.h>
 #include <time.h>
+
+#include <raylib.h>
 
 #include "settings.h"
 
@@ -38,6 +41,8 @@
     "    --help: show this help screen\n"                                      \
     "    --version: show the version of the program\n"
 
+typedef unsigned int uint;
+
 // color is a hex code, rgb
 Color color(int color) {
     // copied from somewhere
@@ -53,6 +58,21 @@ Color color(int color) {
 
 #define NUM_BRICKS    (int)(WINWIDTH / (BRICK_WIDTH + 20))
 #define BRICK_PADDING (int)((WINWIDTH - NUM_BRICKS * (BRICK_WIDTH + 20)) / 2)
+
+#define check_alloc(ptr)                                                       \
+    if (ptr == NULL) {                                                         \
+        perror("alloc");                                                       \
+        exit(1);                                                               \
+    }
+
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+#define panic(...)                                                             \
+    {                                                                          \
+        eprintf(__VA_ARGS__);                                                  \
+        eprintf("\n");                                                         \
+        exit(1);                                                               \
+    }
 
 #if THEME == THEME_DARK
 // dark theme
@@ -178,8 +198,8 @@ typedef struct {
     Paddle paddle;
     Ball ball;
     GameGui gui;
-    int score;
-    int bricks_broken; // HUD
+    uint score;
+    uint bricks_broken; // HUD
     int paddle_speed;
     bool paused;
     bool exit_overlay;
@@ -199,7 +219,22 @@ typedef struct {
     Screen screen;
 } State;
 
-static int maxscore;
+typedef struct LeaderboardEntry {
+    const char* name; // owned slice on the heap
+    time_t time;
+    uint score;
+    uint total_score;
+    uint rows;
+    struct LeaderboardEntry* next; // owned on the heap
+} LeaderboardEntry;
+
+typedef struct {
+    FILE* fp; // null if not loaded from file
+    LeaderboardEntry* head;
+} Leaderboard;
+
+bool should_close = false;
+static uint maxscore;
 
 // The global game state
 State s;
@@ -210,7 +245,40 @@ GameState* const gs = &s.game;
 // Reference to s.title_screen
 TitleScreenState* const tss = &s.title_screen;
 
-bool should_close = false;
+/**
+ * Creates a new leaderboard.
+ *
+ * @param file the filename the leaderboard should be read from. NULL = not
+ * reading from file
+ * @return a new leaderboard with all entries loaded in. head may be null if the
+ * file is empty.
+ *
+ */
+Leaderboard new_leaderboard(const char* file);
+
+/**
+ * Destroys a leaderboard. If `fp` is not null, the state of the leaderboard
+ * will be saved.
+ *
+ * @param lb the leaderboard to be destroyed.
+ *
+ */
+void destroy_leaderboard(Leaderboard* lb);
+
+void add_leaderboard_entry(Leaderboard* lb, LeaderboardEntry* entry);
+void del_leaderboard_entry(Leaderboard* lb,
+                           Rectangle* bounds); // might change. not sure
+void print_leaderboard(Leaderboard* lb);
+void draw_leaderboard(Leaderboard* lb);
+void update_leaderboard(Leaderboard* lb);
+
+LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
+                                        uint score, uint total_score,
+                                        uint rows);
+
+LeaderboardEntry* new_leaderboard_entry_from_line(const char* line);
+
+void destroy_leaderboard_entry(LeaderboardEntry* e);
 
 // get an offset for the ball when bouncing on certain surfaces.
 int get_bounce_offset(const Ball* ball);
@@ -246,6 +314,162 @@ void reset_win_or_dead_gui(void);
 void reset_titlescreen(void);
 void reset_all(void);
 
+Leaderboard new_leaderboard(const char* file) {
+    if (file != NULL)
+        panic("not implemented");
+
+    // not written as (Leaderboard){0}; for clarity
+    return (Leaderboard){
+        .fp = NULL,
+        .head = NULL,
+    };
+}
+
+void destroy_leaderboard(Leaderboard* lb) {
+    if (lb->fp != NULL)
+        panic("not implemented");
+
+    LeaderboardEntry* curr = lb->head;
+    while (curr->next != NULL) {
+        LeaderboardEntry* next = curr->next;
+        destroy_leaderboard_entry(next);
+        curr = next;
+    }
+
+    *lb = (Leaderboard){0};
+}
+
+void add_leaderboard_entry(Leaderboard* lb, LeaderboardEntry* entry) {
+    // TODO: this function
+}
+
+void del_leaderboard_entry(Leaderboard* lb, Rectangle* bounds) {
+    // TODO: this function
+}
+
+void print_leaderboard(Leaderboard* lb) {
+    // TODO: this function
+}
+void draw_leaderboard(Leaderboard* lb) {
+    // TODO: this function
+}
+
+void update_leaderboard(Leaderboard* lb) {
+    // TODO: this function
+}
+
+LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
+                                        uint score, uint total_score,
+                                        uint rows) {
+    char* name_buf = malloc(strlen(name) + 1);
+    check_alloc(name_buf);
+    strcpy(name_buf, name);
+
+    LeaderboardEntry* res = calloc(1, sizeof(LeaderboardEntry));
+    check_alloc(res);
+    *res = (LeaderboardEntry){
+        .name = name_buf,
+        .time = time,
+        .score = score,
+        .total_score = total_score,
+        .rows = rows,
+        .next = NULL,
+    };
+
+    return res;
+}
+
+LeaderboardEntry* new_leaderboard_entry_from_line(const char* line) {
+    /*
+     * The line should look something like the following:
+     *
+     * NAME              TIME  SCORE TOTAL_SCORE ROWS
+     * "the user's name" 70    90    180         3
+     *
+     */
+
+    const size_t line_len = strlen(line);
+    size_t curr = 0;
+
+    if (line_len < 2)
+        return NULL;
+
+    // chop off all the garbage
+    while (line[curr] != '"')
+        curr++;
+
+    // find the end delim
+    size_t name_begin = curr + 1;
+    while (line[curr] != '"')
+        curr++;
+
+    // now the end char is "
+    size_t name_end = curr - 1;
+    size_t name_len = name_end - name_begin;
+
+    char* name_buf = malloc(name_len + 1); // null terminator
+    check_alloc(name_buf);
+    strncpy(name_buf, line + name_begin, name_len);
+
+    // chop off whitespaces
+    curr++; // skip past "
+    while (isspace(line[curr]))
+        curr++;
+
+    size_t nums_len = strlen((char*)line + curr);
+    char* nums = malloc(nums_len + 1);
+    check_alloc(nums);
+    strcpy(nums, (char*)line + curr);
+
+    char* curr_tok = NULL;
+    char* strtol_end = NULL;
+
+    curr_tok = strtok(nums, " ");
+    if (curr_tok == NULL)
+        panic("expected time in line `%s`", line);
+    // parse time
+    time_t time = (time_t)strtol(curr_tok, &strtol_end, 10);
+    if (*strtol_end != '\0')
+        panic("couldnt parse line `%s` at position %zu", line, curr);
+
+    curr_tok = strtok(NULL, " ");
+    if (curr_tok == NULL)
+        panic("expected score in line `%s`", line);
+    // parse score
+    uint score = strtol(curr_tok, &strtol_end, 10);
+    if (*strtol_end != '\0')
+        panic("couldnt parse line `%s` at position %zu", line, curr);
+
+    // parse total_score
+    if (curr_tok == NULL)
+        panic("expected total_score in line `%s`", line);
+    uint total_score = strtol(curr_tok, &strtol_end, 10);
+    if (*strtol_end != '\0')
+        panic("couldnt parse line `%s` at position %zu", line, curr);
+
+    // parse rows
+    if (curr_tok == NULL)
+        panic("expected rows in line `%s`", line);
+    uint rows = strtol(curr_tok, &strtol_end, 10);
+    if (*strtol_end != '\0')
+        panic("couldnt parse line `%s` at position %zu", line, curr);
+
+    LeaderboardEntry* res =
+        new_leaderboard_entry(name_buf, time, score, total_score, rows);
+
+    free(nums);
+    free(name_buf);
+
+    return res;
+}
+
+void destroy_leaderboard_entry(LeaderboardEntry* e) {
+    free((void*)e->name);
+    free(e);
+}
+
+// game related functions
+
 int get_bounce_offset(const Ball* ball) {
     double avg =
         (double)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd));
@@ -262,8 +486,8 @@ void make_bricks(void) {
     int cur_y = 60;
     int starting_x = cur_x;
 
-    for (int layer = 0; layer < LAYERS; layer++) {
-        for (int i = 0; i < NUM_BRICKS; i++) {
+    for (size_t layer = 0; layer < LAYERS; layer++) {
+        for (size_t i = 0; i < NUM_BRICKS; i++) {
             Rectangle rec = {cur_x, cur_y, BRICK_WIDTH, BRICK_HEIGHT};
             gs->bricks[layer][i] = (Brick){rec, LAYERS - layer, true};
             cur_x += BRICK_WIDTH + 20;
@@ -274,8 +498,8 @@ void make_bricks(void) {
 }
 
 void draw_game_bricks(void) {
-    for (int y = 0; y < LAYERS; y++) {
-        for (int x = 0; x < NUM_BRICKS; x++) {
+    for (size_t y = 0; y < LAYERS; y++) {
+        for (size_t x = 0; x < NUM_BRICKS; x++) {
             Brick* b = &gs->bricks[y][x];
 
             if (b->active) {
@@ -649,8 +873,8 @@ void update_game_bricks(void) {
     Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
-    for (int y = 0; y < LAYERS; y++) {
-        for (int x = 0; x < NUM_BRICKS; x++) {
+    for (size_t y = 0; y < LAYERS; y++) {
+        for (size_t x = 0; x < NUM_BRICKS; x++) {
             Brick* brick = &gs->bricks[y][x];
 
             if (!brick->active) {
@@ -967,7 +1191,7 @@ int main(int argc, char** argv) {
     srand(time(NULL));
     SetExitKey(KEY_NULL);
 
-    for (int i = 1; i <= LAYERS; i++) {
+    for (size_t i = 1; i <= LAYERS; i++) {
         maxscore += NUM_BRICKS * i;
     }
 

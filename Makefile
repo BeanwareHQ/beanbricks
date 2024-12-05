@@ -6,10 +6,12 @@ OBJ = brickout.o
 
 TARBALLFILES = Makefile LICENSE.md README.md brickout.c settings.def.h 3rdparty assets
 
-brickout: deps mksettings $(OBJ)
+brickout: setup $(OBJ)
 	$(CC) $(CFLAGS) -o brickout $(OBJ)
 
-mksettings:
+setup: deps settings
+
+settings:
 	test -f settings.h || make defaults
 
 brickout.o: settings.h

@@ -1,3 +1,12 @@
+/*
+ * *** CONFIGURATION OPTIONS ***
+ *
+ * Copyright (c) Eason Qin <eason@ezntek.com>, 2024.
+ *
+ * This source code form is wholly licensed under the MIT/Expat license. View
+ * the full license text in the root of the project.
+ */
+
 #pragma once
 
 // colors
