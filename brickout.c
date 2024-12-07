@@ -260,30 +260,37 @@ TitleScreenState* const tss = &s.title_screen;
  * file is empty.
  *
  */
-Leaderboard new_leaderboard(const char* file);
+Leaderboard leaderboard_new(const char* file);
 
 /**
- * Destroys a leaderboard. If `fp` is not null, the state of the leaderboard
- * will be saved.
+ * Saves a leaderboard to `fp` and closes it if `fp` is not NULL.
+ *
+ * @param lb the leaderboard to be closed.
+ *
+ */
+void leaderboard_close(Leaderboard* lb);
+
+/**
+ * Destroys a leaderboard. This will not save and close the file pointer. Please
+ * call `leaderboard_close()` first.
  *
  * @param lb the leaderboard to be destroyed.
  *
  */
-void free_leaderboard(Leaderboard* lb);
-void print_leaderboard(Leaderboard* lb);
-void draw_leaderboard(Leaderboard* lb);
-void update_leaderboard(Leaderboard* lb);
-LeaderboardEntry* get_leaderboard_end(Leaderboard* lb);
-size_t get_leaderboard_length(Leaderboard* lb);
-void add_leaderboard_entry_to_leaderboard(Leaderboard* lb,
-                                          LeaderboardEntry* entry);
+void leaderboard_destroy(Leaderboard* lb);
+void leaderboard_print(Leaderboard* lb);
+void leaderboard_draw(Leaderboard* lb);
+void leaderboard_update(Leaderboard* lb);
+LeaderboardEntry* leaderboard_end(Leaderboard* lb);
+size_t leaderboard_length(Leaderboard* lb);
+void leaderboard_add_entry(Leaderboard* lb, LeaderboardEntry* entry);
 
-LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
+LeaderboardEntry* leaderboard_entry_new(const char* name, time_t time,
                                         uint score, uint total_score,
                                         uint rows);
-LeaderboardEntry* new_leaderboard_entry_from_line(const char* line);
-void free_leaderboard_entry(LeaderboardEntry* e);
-void print_leaderboard_entry(LeaderboardEntry* e);
+LeaderboardEntry* leaderboard_entry_from_line(const char* line);
+void leaderboard_entry_destroy(LeaderboardEntry* e);
+void leaderboard_entry_print(LeaderboardEntry* e);
 
 // get an offset for the ball when bouncing on certain surfaces.
 int get_bounce_offset(const Ball* ball);
@@ -319,7 +326,7 @@ void reset_win_or_dead_gui(void);
 void reset_titlescreen(void);
 void reset_all(void);
 
-Leaderboard new_leaderboard(const char* file) {
+Leaderboard leaderboard_new(const char* file) {
     if (file != NULL)
         panic("not implemented");
 
@@ -330,40 +337,40 @@ Leaderboard new_leaderboard(const char* file) {
     };
 }
 
-void free_leaderboard(Leaderboard* lb) {
+void leaderboard_destroy(Leaderboard* lb) {
     if (lb->fp != NULL)
         panic("not implemented");
 
     LeaderboardEntry* curr = lb->head;
     while (curr != NULL) {
         LeaderboardEntry* next = curr->next;
-        free_leaderboard_entry(curr);
+        leaderboard_entry_destroy(curr);
         curr = next;
     }
 
     *lb = (Leaderboard){0};
 }
 
-void print_leaderboard(Leaderboard* lb) {
+void leaderboard_print(Leaderboard* lb) {
     LeaderboardEntry* curr = lb->head;
     size_t index = 0;
 
     while (curr != NULL) {
         eprintf("%zu | ", index);
-        print_leaderboard_entry(curr);
+        leaderboard_entry_print(curr);
         curr = curr->next;
         index++;
     }
 }
-void draw_leaderboard(Leaderboard* lb) {
+void leaderboard_draw(Leaderboard* lb) {
     // TODO: this function
 }
 
-void update_leaderboard(Leaderboard* lb) {
+void leaderboard_update(Leaderboard* lb) {
     // TODO: this function
 }
 
-LeaderboardEntry* get_leaderboard_end(Leaderboard* lb) {
+LeaderboardEntry* leaderboard_end(Leaderboard* lb) {
     if (lb->head == NULL)
         return NULL;
 
@@ -373,12 +380,11 @@ LeaderboardEntry* get_leaderboard_end(Leaderboard* lb) {
         curr = curr->next;
     return curr;
 }
-size_t get_leaderboard_length(Leaderboard* lb);
+size_t leaderboard_length(Leaderboard* lb);
 
-void add_leaderboard_entry_to_leaderboard(Leaderboard* lb,
-                                          LeaderboardEntry* entry) {
+void leaderboard_add_entry(Leaderboard* lb, LeaderboardEntry* entry) {
 
-    LeaderboardEntry* end = get_leaderboard_end(lb);
+    LeaderboardEntry* end = leaderboard_end(lb);
     if (end == NULL) {
         lb->head = entry;
     } else {
@@ -386,7 +392,7 @@ void add_leaderboard_entry_to_leaderboard(Leaderboard* lb,
     }
 }
 
-LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
+LeaderboardEntry* leaderboard_entry_new(const char* name, time_t time,
                                         uint score, uint total_score,
                                         uint rows) {
     char* name_buf = malloc(strlen(name) + 1);
@@ -407,7 +413,7 @@ LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
     return res;
 }
 
-LeaderboardEntry* new_leaderboard_entry_from_line(const char* line) {
+LeaderboardEntry* leaderboard_entry_from_line(const char* line) {
     /*
      * The line should look something like the following:
      *
@@ -483,7 +489,7 @@ LeaderboardEntry* new_leaderboard_entry_from_line(const char* line) {
         panic("couldnt parse line `%s` at position %zu", line, curr);
 
     LeaderboardEntry* res =
-        new_leaderboard_entry(name_buf, time, score, total_score, rows);
+        leaderboard_entry_new(name_buf, time, score, total_score, rows);
 
     free(nums);
     free(name_buf);
@@ -491,12 +497,12 @@ LeaderboardEntry* new_leaderboard_entry_from_line(const char* line) {
     return res;
 }
 
-void free_leaderboard_entry(LeaderboardEntry* e) {
+void leaderboard_entry_destroy(LeaderboardEntry* e) {
     free((void*)e->name);
     free(e);
 }
 
-void print_leaderboard_entry(LeaderboardEntry* e) {
+void leaderboard_entry_print(LeaderboardEntry* e) {
     eprintf("name: `%s`, time: %lu, score: %d, total_score: %d, rows: %d\n",
             e->name, e->time, e->score, e->total_score, e->rows);
 }
