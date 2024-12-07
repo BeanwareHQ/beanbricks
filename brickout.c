@@ -7,13 +7,13 @@
  * the full license text in the root of the project.
  */
 
-#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <ctype.h>
 #include <math.h>
 #include <time.h>
 
@@ -66,6 +66,12 @@ Color color(int color) {
     }
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+#define eprintln(s)                                                            \
+    {                                                                          \
+        fprintf(stderr, s);                                                    \
+        eprintf("\n");                                                         \
+    }
 
 #define panic(...)                                                             \
     {                                                                          \
@@ -263,22 +269,21 @@ Leaderboard new_leaderboard(const char* file);
  * @param lb the leaderboard to be destroyed.
  *
  */
-void destroy_leaderboard(Leaderboard* lb);
-
-void add_leaderboard_entry(Leaderboard* lb, LeaderboardEntry* entry);
-void del_leaderboard_entry(Leaderboard* lb,
-                           Rectangle* bounds); // might change. not sure
+void free_leaderboard(Leaderboard* lb);
 void print_leaderboard(Leaderboard* lb);
 void draw_leaderboard(Leaderboard* lb);
 void update_leaderboard(Leaderboard* lb);
+LeaderboardEntry* get_leaderboard_end(Leaderboard* lb);
+size_t get_leaderboard_length(Leaderboard* lb);
+void add_leaderboard_entry_to_leaderboard(Leaderboard* lb,
+                                          LeaderboardEntry* entry);
 
 LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
                                         uint score, uint total_score,
                                         uint rows);
-
 LeaderboardEntry* new_leaderboard_entry_from_line(const char* line);
-
-void destroy_leaderboard_entry(LeaderboardEntry* e);
+void free_leaderboard_entry(LeaderboardEntry* e);
+void print_leaderboard_entry(LeaderboardEntry* e);
 
 // get an offset for the ball when bouncing on certain surfaces.
 int get_bounce_offset(const Ball* ball);
@@ -325,30 +330,30 @@ Leaderboard new_leaderboard(const char* file) {
     };
 }
 
-void destroy_leaderboard(Leaderboard* lb) {
+void free_leaderboard(Leaderboard* lb) {
     if (lb->fp != NULL)
         panic("not implemented");
 
     LeaderboardEntry* curr = lb->head;
-    while (curr->next != NULL) {
+    while (curr != NULL) {
         LeaderboardEntry* next = curr->next;
-        destroy_leaderboard_entry(next);
+        free_leaderboard_entry(curr);
         curr = next;
     }
 
     *lb = (Leaderboard){0};
 }
 
-void add_leaderboard_entry(Leaderboard* lb, LeaderboardEntry* entry) {
-    // TODO: this function
-}
-
-void del_leaderboard_entry(Leaderboard* lb, Rectangle* bounds) {
-    // TODO: this function
-}
-
 void print_leaderboard(Leaderboard* lb) {
-    // TODO: this function
+    LeaderboardEntry* curr = lb->head;
+    size_t index = 0;
+
+    while (curr != NULL) {
+        eprintf("%zu | ", index);
+        print_leaderboard_entry(curr);
+        curr = curr->next;
+        index++;
+    }
 }
 void draw_leaderboard(Leaderboard* lb) {
     // TODO: this function
@@ -356,6 +361,29 @@ void draw_leaderboard(Leaderboard* lb) {
 
 void update_leaderboard(Leaderboard* lb) {
     // TODO: this function
+}
+
+LeaderboardEntry* get_leaderboard_end(Leaderboard* lb) {
+    if (lb->head == NULL)
+        return NULL;
+
+    LeaderboardEntry* curr = NULL;
+    curr = lb->head;
+    while (curr->next != NULL)
+        curr = curr->next;
+    return curr;
+}
+size_t get_leaderboard_length(Leaderboard* lb);
+
+void add_leaderboard_entry_to_leaderboard(Leaderboard* lb,
+                                          LeaderboardEntry* entry) {
+
+    LeaderboardEntry* end = get_leaderboard_end(lb);
+    if (end == NULL) {
+        lb->head = entry;
+    } else {
+        end->next = entry;
+    }
 }
 
 LeaderboardEntry* new_leaderboard_entry(const char* name, time_t time,
@@ -463,9 +491,14 @@ LeaderboardEntry* new_leaderboard_entry_from_line(const char* line) {
     return res;
 }
 
-void destroy_leaderboard_entry(LeaderboardEntry* e) {
+void free_leaderboard_entry(LeaderboardEntry* e) {
     free((void*)e->name);
     free(e);
+}
+
+void print_leaderboard_entry(LeaderboardEntry* e) {
+    eprintf("name: `%s`, time: %lu, score: %d, total_score: %d, rows: %d\n",
+            e->name, e->time, e->score, e->total_score, e->rows);
 }
 
 // game related functions
