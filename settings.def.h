@@ -43,6 +43,8 @@ typedef enum {
 
 #define BALL_RADIUS 10 // Ball Radius
 
+#define LEADERBOARD_ENTRY_HEIGHT 30 // height of one leaderboard item
+
 /*
 #define DEBUG_INFO // Optional, uncomment to enable
 */

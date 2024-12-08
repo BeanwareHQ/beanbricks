@@ -1,10 +1,12 @@
 CC = cc
 INCLUDE = -I./3rdparty/include
 LIBS = $(shell pkg-config --cflags --libs raylib) -lm
-CFLAGS = -O2 -Wall -Wpedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
+CFLAGS = -O2 -Wall -Wextra -pedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
 OBJ = brickout.o
-
 TARBALLFILES = Makefile LICENSE.md README.md brickout.c settings.def.h 3rdparty assets
+
+# uncomment for debug options
+#CFLAGS = -O0 -g3 -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
 
 brickout: setup $(OBJ)
 	$(CC) $(CFLAGS) -o brickout $(OBJ)

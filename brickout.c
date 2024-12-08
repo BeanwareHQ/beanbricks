@@ -91,7 +91,8 @@ const int BRICK_COLORS[] = {
 #define TXT_PRIMARY_COLOR   0xffffff
 #define TXT_SECONDARY_COLOR 0xf5f5f5
 #elif THEME == THEME_CTP_MOCHA
-static void LoadRayguiStyle(void) { return; }
+#define LOAD_RAYGUI_STYLE()                                                    \
+    { return; }
 // mocha
 const int BRICK_COLORS[] = {
     [1] = 0xf38ba8, [2] = 0xfab387, [3] = 0xf9e2af, [4] = 0xa6e3a1,
@@ -103,7 +104,8 @@ const int BRICK_COLORS[] = {
 #define TXT_SECONDARY_COLOR 0xbac2de
 #include "assets/catppuccinmochamauve.h"
 extern void GuiLoadStyleCatppuccinMochaMauve(void);
-static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinMochaMauve(); }
+#define LOAD_RAYGUI_STYLE()                                                    \
+    { GuiLoadStyleCatppuccinMochaMauve(); }
 #elif THEME == THEME_CTP_MACCHIATO
 // macchiato
 const int BRICK_COLORS[] = {
@@ -111,12 +113,15 @@ const int BRICK_COLORS[] = {
     [5] = 0x7dc4e4, [6] = 0x8aadf4, [7] = 0xb7bdf8,
 };
 #define BG_COLOR            0x24273a
+#define DARK_SURFACE_COLOR  0x363a4f
+#define LIGHT_SURFACE_COLOR 0x494d64
 #define BALL_COLOR          0x939ab7
 #define TXT_PRIMARY_COLOR   0xcad3f5
 #define TXT_SECONDARY_COLOR 0xb8c0e0
 #include "assets/catppuccinmacchiatosapphire.h"
 extern void GuiLoadStyleCatppuccinMacchiatoSapphire(void);
-static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinMacchiatoSapphire(); }
+#define LOAD_RAYGUI_STYLE()                                                    \
+    { GuiLoadStyleCatppuccinMacchiatoSapphire(); }
 #elif THEME == THEME_CTP_FRAPPE
 // frappe
 const int BRICK_COLORS[] = {
@@ -128,7 +133,8 @@ const int BRICK_COLORS[] = {
 #define TXT_SECONDARY_COLOR 0xb5bfe2
 #include "assets/catppuccinfrappesapphire.h"
 extern void GuiLoadStyleCatppuccinFrappeSapphire(void);
-static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinFrappeSapphire(); }
+#define LOAD_RAYGUI_STYLE()                                                    \
+    { GuiLoadStyleCatppuccinFrappeSapphire(); }
 #elif THEME == THEME_CTP_LATTE
 // frappe
 const int BRICK_COLORS[] = {
@@ -141,7 +147,8 @@ const int BRICK_COLORS[] = {
 #define TXT_SECONDARY_COLOR 0x4c4f69
 #include "assets/catppuccinlattesapphire.h"
 extern void GuiLoadStyleCatppuccinLatteSapphire(void);
-static void LoadRayguiStyle(void) { GuiLoadStyleCatppuccinLatteSapphire(); }
+#define LOAD_RAYGUI_STYLE()                                                    \
+    { GuiLoadStyleCatppuccinLatteSapphire(); }
 #else
 const int BRICK_COLORS[] = {
     [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
@@ -151,7 +158,8 @@ const int BRICK_COLORS[] = {
 #define BALL_COLOR          0x828282
 #define TXT_PRIMARY_COLOR   0x000000
 #define TXT_SECONDARY_COLOR 0x505050
-static void LoadRayguiStyle(void) { return; }
+#define LOAD_RAYGUI_STYLE()                                                    \
+    { return; }
 #endif
 
 typedef struct {
@@ -251,6 +259,9 @@ GameState* const gs = &s.game;
 // Reference to s.title_screen
 TitleScreenState* const tss = &s.title_screen;
 
+// the leaderboard
+Leaderboard lb = {0};
+
 /**
  * Creates a new leaderboard.
  *
@@ -291,6 +302,8 @@ LeaderboardEntry* leaderboard_entry_new(const char* name, time_t time,
 LeaderboardEntry* leaderboard_entry_from_line(const char* line);
 void leaderboard_entry_destroy(LeaderboardEntry* e);
 void leaderboard_entry_print(LeaderboardEntry* e);
+void leaderboard_entry_draw(LeaderboardEntry* e, size_t index, int y);
+void leaderboard_entry_update(LeaderboardEntry* e);
 
 // get an offset for the ball when bouncing on certain surfaces.
 int get_bounce_offset(const Ball* ball);
@@ -325,6 +338,9 @@ void reset_game(void);
 void reset_win_or_dead_gui(void);
 void reset_titlescreen(void);
 void reset_all(void);
+
+void init(void);
+void deinit(void);
 
 Leaderboard leaderboard_new(const char* file) {
     if (file != NULL)
@@ -363,7 +379,16 @@ void leaderboard_print(Leaderboard* lb) {
     }
 }
 void leaderboard_draw(Leaderboard* lb) {
-    // TODO: this function
+    LeaderboardEntry* curr = lb->head;
+    size_t index = 0;
+    size_t y = 350;
+
+    while (index < 10 && curr != NULL) {
+        leaderboard_entry_draw(curr, index,
+                               y + index * LEADERBOARD_ENTRY_HEIGHT);
+        curr = curr->next;
+        index++;
+    }
 }
 
 void leaderboard_update(Leaderboard* lb) {
@@ -506,6 +531,41 @@ void leaderboard_entry_print(LeaderboardEntry* e) {
     eprintf("name: `%s`, time: %lu, score: %d, total_score: %d, rows: %d\n",
             e->name, e->time, e->score, e->total_score, e->rows);
 }
+
+void leaderboard_entry_draw(LeaderboardEntry* e, size_t index, int y) {
+    const int WIDTH = 400;
+    const int BEGIN = WINWIDTH / 2 - WIDTH / 2;
+    const int RANKING_BOX_WIDTH = MeasureText("00", 20) + 10; // +padding
+
+    const Rectangle box = {
+        .x = BEGIN,
+        .y = y,
+        .width = WIDTH,
+        .height = LEADERBOARD_ENTRY_HEIGHT,
+    };
+
+    const Rectangle ranking_rec = {
+        .x = BEGIN,
+        .y = y,
+        .width = RANKING_BOX_WIDTH,
+        .height = LEADERBOARD_ENTRY_HEIGHT, // 10 + 20 + 10
+    };
+
+    char buf[5] = {0};
+    snprintf(buf, sizeof(buf), "%02zu", index + 1);
+    const int RANKING_TEXT_WIDTH = MeasureText(buf, 20);
+
+    DrawRectangleRec(box, color(DARK_SURFACE_COLOR));
+    DrawRectangleRec(ranking_rec, color(LIGHT_SURFACE_COLOR));
+
+    DrawText(buf, BEGIN + (RANKING_BOX_WIDTH / 2 - RANKING_TEXT_WIDTH / 2),
+             y + 5, 20, color(TXT_PRIMARY_COLOR));
+
+    DrawText(e->name, BEGIN + RANKING_BOX_WIDTH + 10, y + 5, 20,
+             color(TXT_SECONDARY_COLOR));
+}
+
+void leaderboard_entry_update(LeaderboardEntry* e) {}
 
 // game related functions
 
@@ -705,6 +765,7 @@ void draw_titlescreen(void) {
     DrawText("version " VERSION, 20, 34, 10, color(TXT_SECONDARY_COLOR));
 
     draw_titlescreen_gui();
+    leaderboard_draw(&lb);
 }
 
 void draw_titlescreen_gui(void) {
@@ -1096,7 +1157,7 @@ void reset_game(void) {
     } else if (speed_decider == 1) {
         xspd = 4;
         yspd = 3;
-    } else if (speed_decider == 2) {
+    } else {
         xspd = 3;
         yspd = 3;
     }
@@ -1211,7 +1272,7 @@ void reset_all(void) {
     reset_win_or_dead_gui();
 }
 
-int main(int argc, char** argv) {
+void handle_args(int argc, char* argv[argc]) {
     argc--;
     argv++;
 
@@ -1224,6 +1285,28 @@ int main(int argc, char** argv) {
             exit(EXIT_SUCCESS);
         }
     }
+}
+
+void init(void) {
+    // TEST DATA (will replace later)
+    lb = leaderboard_new(NULL);
+    leaderboard_add_entry(&lb,
+                          leaderboard_entry_new("ezntek", 0, 100, 100, 10));
+    leaderboard_add_entry(&lb, leaderboard_entry_new("rd107", 0, 95, 100, 10));
+    leaderboard_add_entry(&lb, leaderboard_entry_new("3bd", 0, 90, 100, 10));
+    leaderboard_add_entry(
+        &lb, leaderboard_entry_new("koolguyshades", 0, 85, 100, 10));
+    leaderboard_add_entry(&lb,
+                          leaderboard_entry_new("taniesq", 0, 80, 100, 10));
+    leaderboard_add_entry(&lb, leaderboard_entry_new("sun4ez", 0, 75, 100, 10));
+    leaderboard_add_entry(&lb,
+                          leaderboard_entry_new("Kasreti", 0, 74, 100, 10));
+    leaderboard_add_entry(&lb,
+                          leaderboard_entry_new("Squiddum", 0, 73, 100, 10));
+
+    leaderboard_add_entry(&lb, leaderboard_entry_new("mrdc3", 0, 72, 100, 10));
+
+    leaderboard_add_entry(&lb, leaderboard_entry_new("ja4e", 0, 70, 100, 10));
 
     InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
     SetTargetFPS((int)(60 / (1 / SPEED)));
@@ -1234,9 +1317,19 @@ int main(int argc, char** argv) {
         maxscore += NUM_BRICKS * i;
     }
 
-    LoadRayguiStyle();
+    LOAD_RAYGUI_STYLE();
 
     reset_all();
+}
+
+void deinit(void) {
+    leaderboard_destroy(&lb);
+    CloseWindow();
+}
+
+int main(int argc, char* argv[argc]) {
+    handle_args(argc, argv);
+    init();
 
     while (!should_close) {
         if (WindowShouldClose() || should_close)
@@ -1249,6 +1342,6 @@ int main(int argc, char** argv) {
         EndDrawing();
     }
 
-    CloseWindow();
+    deinit();
     return 0;
 }
