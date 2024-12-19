@@ -15,6 +15,7 @@
 
 #include <ctype.h>
 #include <math.h>
+#include <sys/cdefs.h>
 #include <time.h>
 
 #include <raylib.h>
@@ -239,6 +240,10 @@ typedef struct LeaderboardEntry {
     uint score;
     uint total_score;
     uint rows;
+
+    // internal use data
+    bool _hovered;
+
     struct LeaderboardEntry* next; // owned on the heap
 } LeaderboardEntry;
 
@@ -303,6 +308,7 @@ LeaderboardEntry* leaderboard_entry_from_line(const char* line);
 void leaderboard_entry_destroy(LeaderboardEntry* e);
 void leaderboard_entry_print(LeaderboardEntry* e);
 void leaderboard_entry_draw(LeaderboardEntry* e, size_t index, int y);
+void leaderboard_entry_draw_tooltip(LeaderboardEntry* e);
 void leaderboard_entry_update(LeaderboardEntry* e);
 
 // get an offset for the ball when bouncing on certain surfaces.
@@ -382,17 +388,60 @@ void leaderboard_draw(Leaderboard* lb) {
     LeaderboardEntry* curr = lb->head;
     size_t index = 0;
     size_t y = 350;
+    LeaderboardEntry* hovered = NULL;
 
     while (index < 10 && curr != NULL) {
         leaderboard_entry_draw(curr, index,
                                y + index * LEADERBOARD_ENTRY_HEIGHT);
+        if (curr->_hovered)
+            hovered = curr;
         curr = curr->next;
         index++;
+    }
+
+    // handle tooltips
+    if (hovered != NULL) {
+        leaderboard_entry_draw_tooltip(hovered);
     }
 }
 
 void leaderboard_update(Leaderboard* lb) {
-    // TODO: this function
+    LeaderboardEntry* curr = lb->head;
+    size_t index = 0;
+    size_t y = 350;
+    size_t x = (WINWIDTH / 2) - (LEADERBOARD_ENTRY_WIDTH / 2);
+
+    Rectangle lb_entry_rec = {
+        .x = x,
+        .y = y,
+        .width = LEADERBOARD_ENTRY_WIDTH,
+        .height = LEADERBOARD_ENTRY_HEIGHT,
+    };
+
+    // this update function runs every frame, so mouse data does
+    // not change in the loop.
+
+    Vector2 mouse_pos = GetMousePosition();
+    Rectangle mouse_rec = {
+        .x = mouse_pos.x,
+        .y = mouse_pos.y,
+        .width = 1,
+        .height = 1,
+    };
+
+    while (index < 10 && curr != NULL) {
+        bool mouse_over_entry = CheckCollisionRecs(lb_entry_rec, mouse_rec);
+        // im a lazy piece of shit
+        if (mouse_over_entry && !curr->_hovered)
+            curr->_hovered = true;
+        else if (!mouse_over_entry && curr->_hovered)
+            curr->_hovered = false;
+
+        leaderboard_entry_update(curr);
+        curr = curr->next;
+        index++;
+        lb_entry_rec.y = y + index * LEADERBOARD_ENTRY_HEIGHT;
+    }
 }
 
 LeaderboardEntry* leaderboard_end(Leaderboard* lb) {
@@ -433,6 +482,7 @@ LeaderboardEntry* leaderboard_entry_new(const char* name, time_t time,
         .total_score = total_score,
         .rows = rows,
         .next = NULL,
+        ._hovered = false,
     };
 
     return res;
@@ -533,14 +583,13 @@ void leaderboard_entry_print(LeaderboardEntry* e) {
 }
 
 void leaderboard_entry_draw(LeaderboardEntry* e, size_t index, int y) {
-    const int WIDTH = 400;
-    const int BEGIN = WINWIDTH / 2 - WIDTH / 2;
+    const int BEGIN = WINWIDTH / 2 - LEADERBOARD_ENTRY_WIDTH / 2;
     const int RANKING_BOX_WIDTH = MeasureText("00", 20) + 10; // +padding
 
     const Rectangle box = {
         .x = BEGIN,
         .y = y,
-        .width = WIDTH,
+        .width = LEADERBOARD_ENTRY_WIDTH,
         .height = LEADERBOARD_ENTRY_HEIGHT,
     };
 
@@ -565,7 +614,21 @@ void leaderboard_entry_draw(LeaderboardEntry* e, size_t index, int y) {
              color(TXT_SECONDARY_COLOR));
 }
 
-void leaderboard_entry_update(LeaderboardEntry* e) {}
+void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
+    Vector2 mouse_pos = GetMousePosition();
+    Rectangle tooltip_bounds = {
+        .x = mouse_pos.x,
+        .y = mouse_pos.y,
+        .width = 250,
+        .height = 150,
+    };
+
+    DrawRectangleRec(tooltip_bounds, RED);
+
+    printf("%s\n", e->name);
+}
+
+void leaderboard_entry_update(LeaderboardEntry* e) { return; }
 
 // game related functions
 
@@ -1061,6 +1124,8 @@ void update_titlescreen(void) {
     } else {
         tss->title_anim_stage--;
     }
+
+    leaderboard_update(&lb);
 }
 
 void update_settings(void) { update_dead(); }
@@ -1297,7 +1362,7 @@ void init(void) {
     leaderboard_add_entry(
         &lb, leaderboard_entry_new("koolguyshades", 0, 85, 100, 10));
     leaderboard_add_entry(&lb,
-                          leaderboard_entry_new("taniesq", 0, 80, 100, 10));
+                          leaderboard_entry_new("georgeq166", 0, 80, 100, 10));
     leaderboard_add_entry(&lb, leaderboard_entry_new("sun4ez", 0, 75, 100, 10));
     leaderboard_add_entry(&lb,
                           leaderboard_entry_new("Kasreti", 0, 74, 100, 10));

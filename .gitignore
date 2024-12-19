@@ -4,3 +4,4 @@ settings.h
 brickout/
 brickout
 *.o
+.vscode
