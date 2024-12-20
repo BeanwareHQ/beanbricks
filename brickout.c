@@ -54,7 +54,6 @@ Color color(int color) {
     return (Color){r, g, b, 0xFF};
 }
 
-
 #define PADDLE_DEFAULT_X (int)((WINWIDTH / 2) - (PADDLE_WIDTH / 2))
 #define PADDLE_DEFAULT_Y (int)(WINHEIGHT - 75)
 
@@ -82,7 +81,7 @@ Color color(int color) {
         exit(1);                                                               \
     }
 
-#define length(lst) (sizeof(lst)/sizeof(lst[0])) 
+#define length(lst) (int)(sizeof(lst) / sizeof(lst[0]))
 
 #if THEME == THEME_DARK
 // dark theme
@@ -393,6 +392,17 @@ void leaderboard_draw(Leaderboard* lb) {
     size_t y = 350;
     LeaderboardEntry* hovered = NULL;
 
+    if (curr == NULL) {
+        // leaderboard is empty
+
+        char* txt = "leaderboard empty... play a game to get started!";
+        int txtsz = 20;
+        int txt_width = MeasureText(txt, txtsz);
+        DrawText(txt, (int)(WINWIDTH / 2 - txt_width / 2), y, txtsz,
+                 color(TXT_SECONDARY_COLOR));
+        return;
+    }
+
     while (index < 10 && curr != NULL) {
         leaderboard_entry_draw(curr, index,
                                y + index * LEADERBOARD_ENTRY_HEIGHT);
@@ -652,8 +662,8 @@ void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
     Rectangle bounds = {
         .x = mouse_pos.x,
         .y = mouse_pos.y,
-        .width = max_width + 14,
-        .height = (txt_y + 35 + 25*length(rows)) - txt_y + 7,
+        .width = max_width + 14,                                // + 2*padding
+        .height = (txt_y + 35 + 25 * length(rows)) - txt_y + 7, // padding
     };
 
     Rectangle contents = bounds;
@@ -1191,11 +1201,17 @@ void update_game(void) {
 
     if (gs->score >= maxscore) {
         s.screen = SCR_WIN;
+        LeaderboardEntry* e = leaderboard_entry_new(
+            "default name", 0, gs->score, maxscore, LAYERS);
+        leaderboard_add_entry(&lb, e);
         return;
     }
 
     if (IsKeyPressed(KEY_K)) {
         s.screen = SCR_DEAD;
+        LeaderboardEntry* e = leaderboard_entry_new(
+            "default name", 0, gs->score, maxscore, LAYERS);
+        leaderboard_add_entry(&lb, e);
         return;
     }
 
@@ -1401,23 +1417,6 @@ void handle_args(int argc, char* argv[argc]) {
 void init(void) {
     // TEST DATA (will replace later)
     lb = leaderboard_new(NULL);
-    leaderboard_add_entry(&lb,
-                          leaderboard_entry_new("ezntek", 0, 100, 100, 10));
-    leaderboard_add_entry(&lb, leaderboard_entry_new("rd107", 0, 95, 100, 10));
-    leaderboard_add_entry(&lb, leaderboard_entry_new("3bd", 0, 90, 100, 10));
-    leaderboard_add_entry(
-        &lb, leaderboard_entry_new("koolguyshades", 0, 85, 100, 10));
-    leaderboard_add_entry(&lb,
-                          leaderboard_entry_new("georgeq166", 0, 80, 100, 10));
-    leaderboard_add_entry(&lb, leaderboard_entry_new("sun4ez", 0, 75, 100, 10));
-    leaderboard_add_entry(&lb,
-                          leaderboard_entry_new("Kasreti", 0, 74, 100, 10));
-    leaderboard_add_entry(&lb,
-                          leaderboard_entry_new("Squiddum", 0, 73, 100, 10));
-
-    leaderboard_add_entry(&lb, leaderboard_entry_new("mrdc3", 0, 72, 100, 10));
-
-    leaderboard_add_entry(&lb, leaderboard_entry_new("ja4e", 0, 70, 100, 10));
 
     InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
     SetTargetFPS((int)(60 / (1 / SPEED)));
