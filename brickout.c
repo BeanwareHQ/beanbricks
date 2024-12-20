@@ -54,6 +54,7 @@ Color color(int color) {
     return (Color){r, g, b, 0xFF};
 }
 
+
 #define PADDLE_DEFAULT_X (int)((WINWIDTH / 2) - (PADDLE_WIDTH / 2))
 #define PADDLE_DEFAULT_Y (int)(WINHEIGHT - 75)
 
@@ -80,6 +81,8 @@ Color color(int color) {
         eprintf("\n");                                                         \
         exit(1);                                                               \
     }
+
+#define length(lst) (sizeof(lst)/sizeof(lst[0])) 
 
 #if THEME == THEME_DARK
 // dark theme
@@ -616,16 +619,59 @@ void leaderboard_entry_draw(LeaderboardEntry* e, size_t index, int y) {
 
 void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
     Vector2 mouse_pos = GetMousePosition();
-    Rectangle tooltip_bounds = {
+
+    // rows:
+    // -----
+    //
+    // name: <name>
+    // score: <score>/<total_score>
+    // time: <time>
+    // rows: <rows>
+
+    char rows[4][50] = {0};
+    size_t max_row_len = sizeof(rows[0]);
+
+    snprintf(rows[0], max_row_len, "name: %s", e->name);
+    snprintf(rows[1], max_row_len, "score: %d/%d", e->score, e->total_score);
+    snprintf(rows[2], max_row_len, "time: %d", (int)e->time);
+    snprintf(rows[3], max_row_len, "rows: %d", e->rows);
+
+    // draw relative to the mouse position
+    int txt_x = mouse_pos.x + 7; // border + padding
+    int txt_y = mouse_pos.y + 7;
+
+    int max_width = MeasureText(rows[0], 20);
+    for (size_t i = 0; i < length(rows); i++) {
+        int width = MeasureText(rows[i], 20);
+
+        if (width > max_width) {
+            max_width = width;
+        }
+    }
+
+    Rectangle bounds = {
         .x = mouse_pos.x,
         .y = mouse_pos.y,
-        .width = 250,
-        .height = 150,
+        .width = max_width + 14,
+        .height = (txt_y + 35 + 25*length(rows)) - txt_y + 7,
     };
 
-    DrawRectangleRec(tooltip_bounds, RED);
+    Rectangle contents = bounds;
+    contents.x += 2;
+    contents.y += 2;
+    contents.width -= 4;
+    contents.height -= 4;
 
-    printf("%s\n", e->name);
+    DrawRectangleRec(bounds, color(BRICK_COLORS[5]));
+    DrawRectangleRec(contents, color(DARK_SURFACE_COLOR));
+
+    DrawText("Stats", txt_x, txt_y, 30, color(TXT_PRIMARY_COLOR));
+    txt_y += 35;
+
+    for (size_t i = 0; i < length(rows); i++) {
+        DrawText(rows[i], txt_x, txt_y, 20, color(TXT_SECONDARY_COLOR));
+        txt_y += 25;
+    }
 }
 
 void leaderboard_entry_update(LeaderboardEntry* e) { return; }
