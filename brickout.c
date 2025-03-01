@@ -984,13 +984,13 @@ void update_game_paddle(void) {
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     // paddle update logic
-    if (IsKeyDown(KEY_LEFT)) {
+    if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_H) || IsKeyDown(KEY_A)) {
         if (paddle->rec.x - gs->paddle_speed >= 0) {
             paddle->rec.x -= gs->paddle_speed;
         } else {
             paddle->rec.x = 0;
         }
-    } else if (IsKeyDown(KEY_RIGHT)) {
+    } else if (IsKeyDown(KEY_RIGHT) || IsKeyDown(Key_L) || IsKeyDown(KEY_D)) {
         if (paddle->rec.x + gs->paddle_speed <= WINWIDTH - PADDLE_WIDTH) {
             paddle->rec.x += gs->paddle_speed;
         } else {
