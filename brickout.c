@@ -990,7 +990,7 @@ void update_game_paddle(void) {
         } else {
             paddle->rec.x = 0;
         }
-    } else if (IsKeyDown(KEY_RIGHT) || IsKeyDown(Key_L) || IsKeyDown(KEY_D)) {
+    } else if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_L) || IsKeyDown(KEY_D)) {
         if (paddle->rec.x + gs->paddle_speed <= WINWIDTH - PADDLE_WIDTH) {
             paddle->rec.x += gs->paddle_speed;
         } else {
