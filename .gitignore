@@ -1,4 +1,4 @@
-3rdparty/include/*
+3rdparty/*
 settings.h
 *.tar.gz
 brickout/

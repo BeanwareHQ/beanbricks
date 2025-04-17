@@ -1,13 +1,22 @@
 CC = cc
 INCLUDE = -I./3rdparty/include
 LIBS = $(shell pkg-config --cflags --libs raylib) -lm
-#CFLAGS = -O2 -Wall -Wextra -pedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
-CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
-OBJ = brickout.o
+
+OBJ = brickout.o 3rdparty/asv/asv.o
+
+RELEASE_CFLAGS = -O2 -Wall -Wextra -pedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
+DEBUG_CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
 TARBALLFILES = Makefile LICENSE.md README.md brickout.c settings.def.h 3rdparty assets
 
-# uncomment for debug options
-#CFLAGS = -O0 -g3 -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
+HEADERS = settings.h
+
+TARGET=debug
+
+ifeq ($(TARGET),debug)
+	CFLAGS=$(DEBUG_CFLAGS)
+else
+	CFLAGS=$(RELEASE_CFLAGS)
+endif
 
 brickout: setup $(OBJ)
 	$(CC) $(CFLAGS) -o brickout $(OBJ)
@@ -19,12 +28,15 @@ settings:
 
 brickout.o: settings.h
 
-deps:
+deps: 
 	mkdir -p 3rdparty/include
 	test -f 3rdparty/include/raygui.h || curl -fL -o 3rdparty/include/raygui.h https://raw.githubusercontent.com/raysan5/raygui/25c8c65a6e5f0f4d4b564a0343861898c6f2778b/src/raygui.h
-
+	test -d 3rdparty/asv || git clone "https://github.com/ezntek/asv" 3rdparty/asv
+	test -f 3rdparty/asv/asv.o || make -C 3rdparty/asv
+	cp 3rdparty/asv/*.h 3rdparty/include/
+	
 updatedeps:
-	rm -f 3rdparty/include/raygui.h 
+	rm -rf 3rdparty/*
 	make deps
 
 tarball: deps
