@@ -1,5 +1,5 @@
 /*
- * brickout.c: a questionable brick-out/breakout clone in C and Raylib.
+ * beanbricks.c: a questionable brick-out/breakout clone in C and Raylib.
  *
  * Copyright (c) Eason Qin <eason@ezntek.com>, 2024.
  *
@@ -28,7 +28,7 @@
 #define VERSION "0.2.0-pre"
 
 #define HELP                                                                   \
-    "\033[1mbrickout: a questionable brick-out/breakout clone in C and "       \
+    "\033[1mbeanbricks: a questionable brick-out/breakout clone in C and "     \
     "raylib.\033[0m\n\n"                                                       \
     "Copyright (c) Eason Qin <eason@ezntek.com>, 2024.\n"                      \
     "This program and all source code in the project directory including "     \
@@ -36,7 +36,7 @@
     "stated.\n"                                                                \
     "View the full text of the license in the root of the project, or pass "   \
     "--license."                                                               \
-    "usage: brickout [flags]\n"                                                \
+    "usage: beanbricks [flags]\n"                                              \
     "running the program with no args will launch the game.\n\n"               \
     "options:\n"                                                               \
     "    --help: show this help screen\n"                                      \
@@ -1386,7 +1386,7 @@ void handle_args(i32 argc, char* argv[argc]) {
 
     if (argc > 0) {
         if (!strcmp(argv[0], "--version")) {
-            printf("brickout version " VERSION "\n");
+            printf("beanbricks version " VERSION "\n");
             exit(EXIT_SUCCESS);
         } else if (!strcmp(argv[0], "--help")) {
             printf(HELP);

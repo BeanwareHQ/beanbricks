@@ -1,7 +1,7 @@
 /*
  * *** CONFIGURATION OPTIONS ***
  *
- * Copyright (c) Eason Qin <eason@ezntek.com>, 2024.
+ * Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.
  *
  * This source code form is wholly licensed under the MIT/Expat license. View
  * the full license text in the root of the project.
@@ -54,4 +54,4 @@ typedef enum {
     1 // Global speed multiplier. A decimal makes the game slower, 1=60FPS. 0 is
       // undefined.
 
-#define THEME THEME_DEFAULT // Theme (choose options above)
+#define THEME THEME_CTP_MACCHIATO // Theme (choose options above)

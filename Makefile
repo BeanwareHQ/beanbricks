@@ -2,11 +2,11 @@ CC = cc
 INCLUDE = -I./3rdparty/include
 LIBS = $(shell pkg-config --cflags --libs raylib) -lm
 
-OBJ = brickout.o 3rdparty/asv/asv.o
+OBJ = beanbricks.o 3rdparty/asv/asv.o
 
 RELEASE_CFLAGS = -O2 -Wall -Wextra -pedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
 DEBUG_CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
-TARBALLFILES = Makefile LICENSE.md README.md brickout.c settings.def.h 3rdparty assets
+TARBALLFILES = Makefile LICENSE.md README.md beanbricks.c settings.def.h 3rdparty assets
 
 HEADERS = settings.h
 
@@ -18,15 +18,15 @@ else
 	CFLAGS=$(RELEASE_CFLAGS)
 endif
 
-brickout: setup $(OBJ)
-	$(CC) $(CFLAGS) -o brickout $(OBJ)
+beanbricks: setup $(OBJ)
+	$(CC) $(CFLAGS) -o beanbricks $(OBJ)
 
 setup: deps settings
 
 settings:
 	test -f settings.h || make defaults
 
-brickout.o: settings.h
+beanbricks.o: settings.h
 
 deps: 
 	mkdir -p 3rdparty/include
@@ -40,17 +40,17 @@ updatedeps:
 	make deps
 
 tarball: deps
-	mkdir -p brickout
-	cp -rv $(TARBALLFILES) brickout/
-	tar czvf brickout.tar.gz brickout
-	rm -rf brickout
+	mkdir -p beanbricks
+	cp -rv $(TARBALLFILES) beanbricks/
+	tar czvf beanbricks.tar.gz beanbricks
+	rm -rf beanbricks
 
 defaults:
 	rm -f settings.h
 	cp settings.def.h settings.h
 
 clean:
-	rm -rf brickout brickout.tar.gz brickout $(OBJ)
+	rm -rf beanbricks beanbricks.tar.gz beanbricks $(OBJ)
 	rm -f 3rdparty/include/*
 
 cleanall: clean defaults
