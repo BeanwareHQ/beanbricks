@@ -6,6 +6,7 @@
  * This source code form is wholly licensed under the MIT/Expat license. View
  * the full license text in the root of the project.
  */
+#define _POSIX_C_SOURCE 200809L
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -29,7 +30,7 @@
 #define VERSION "0.2.0-pre"
 
 #define HELP                                                                   \
-    "\033[1mbeanbricks: a questionable brick-out/breakout clone in C and "     \
+    "\033[1mbeanbricks: a questionable breakout clone in C and "               \
     "raylib.\033[0m\n\n"                                                       \
     "Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.\n"                 \
     "This program and all source code in the project directory including "     \
@@ -239,17 +240,17 @@ typedef struct {
 bool should_close = false;
 static u32 maxscore;
 
-// The global game state
-State s;
+// The global game state (sorry rustaceans)
+static State s;
 
 // Reference to s.game
-GameState* const gs = &s.game;
+static GameState* const gs = &s.game;
 
 // Reference to s.title_screen
-TitleScreenState* const tss = &s.title_screen;
+static TitleScreenState* const tss = &s.title_screen;
 
 // the leaderboard
-Leaderboard lb = {0};
+static Leaderboard lb = {0};
 
 /**
  * Creates a new leaderboard.
@@ -853,8 +854,8 @@ void draw_titlescreen(void) {
     DrawText(begin, begin_posx, begin_posy, begin_txtsz,
              color(TXT_SECONDARY_COLOR));
 
-    DrawText("Copyright (c) Eason Qin <eason@ezntek.com>, 2024", 20, 20, 10,
-             color(TXT_SECONDARY_COLOR));
+    DrawText("Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025", 20, 20,
+             10, color(TXT_SECONDARY_COLOR));
     DrawText("version " VERSION, 20, 34, 10, color(TXT_SECONDARY_COLOR));
 
     draw_titlescreen_gui();

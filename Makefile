@@ -35,11 +35,13 @@ dep_raylib:
 	test -f 3rdparty/include/raygui.h || curl -fL -o 3rdparty/include/raygui.h https://raw.githubusercontent.com/raysan5/raygui/25c8c65a6e5f0f4d4b564a0343861898c6f2778b/src/raygui.h
 	
 dep_asv:
+	mkdir -p 3rdparty/include
 	test -d 3rdparty/asv || curl -fL -o 3rdparty/asv.zip https://github.com/ezntek/asv/archive/refs/heads/main.zip && unzip 3rdparty/asv.zip -d 3rdparty && mv 3rdparty/asv-main 3rdparty/asv 
 	test -f 3rdparty/asv/asv.o || make -C 3rdparty/asv
 	cp 3rdparty/asv/*.h 3rdparty/include/
 
 dep_cjson:
+	mkdir -p 3rdparty/include
 	test -d 3rdparty/cJSON || curl -fL -o 3rdparty/cJSON.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v${CJSON_VERSION}.tar.gz && tar xpf 3rdparty/cJSON.tar.gz -C 3rdparty/ && mv 3rdparty/cJSON-${CJSON_VERSION} 3rdparty/cJSON && make -C 3rdparty/cJSON && cp 3rdparty/cJSON/*.h 3rdparty/include/
 
 deps: dep_raylib dep_asv dep_cjson
@@ -58,9 +60,11 @@ defaults:
 	rm -f settings.h
 	cp settings.def.h settings.h
 
-clean:
+cleandeps: 
+	rm -rf 3rdparty/*
+
+clean: cleandeps
 	rm -rf beanbricks beanbricks.tar.gz beanbricks $(OBJ)
-	rm -f 3rdparty/include/*
 
 cleanall: clean defaults
 
