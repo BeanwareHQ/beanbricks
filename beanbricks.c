@@ -1,7 +1,7 @@
 /*
- * beanbricks.c: a questionable brick-out/breakout clone in C and Raylib.
+ * beanbricks.c: a questionable breakout clone in C and Raylib.
  *
- * Copyright (c) Eason Qin <eason@ezntek.com>, 2024.
+ * Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.
  *
  * This source code form is wholly licensed under the MIT/Expat license. View
  * the full license text in the root of the project.
@@ -19,6 +19,7 @@
 
 #include <raylib.h>
 
+#include "common.h"
 #include "settings.h"
 
 #define RAYGUI_IMPLEMENTATION
@@ -30,7 +31,7 @@
 #define HELP                                                                   \
     "\033[1mbeanbricks: a questionable brick-out/breakout clone in C and "     \
     "raylib.\033[0m\n\n"                                                       \
-    "Copyright (c) Eason Qin <eason@ezntek.com>, 2024.\n"                      \
+    "Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.\n"                 \
     "This program and all source code in the project directory including "     \
     "this file is licensed under the MIT/Expat license; unless otherwise "     \
     "stated.\n"                                                                \
@@ -51,14 +52,6 @@ Color color(i32 color) {
 
     return (Color){r, g, b, 0xFF};
 }
-
-#define PADDLE_DEFAULT_X (i32)((WINWIDTH / 2) - (PADDLE_WIDTH / 2))
-#define PADDLE_DEFAULT_Y (i32)(WINHEIGHT - 75)
-
-#define NUM_BRICKS    (i32)(WINWIDTH / (BRICK_WIDTH + 20))
-#define BRICK_PADDING (i32)((WINWIDTH - NUM_BRICKS * (BRICK_WIDTH + 20)) / 2)
-
-#define LENGTH(lst) (i32)(sizeof(lst) / sizeof(lst[0]))
 
 #if THEME == THEME_DARK
 // dark theme
@@ -232,7 +225,7 @@ typedef struct LeaderboardEntry {
     u32 total_score;
     u32 rows;
 
-    // i32ernal use data
+    // internal use data
     bool _hovered;
 
     struct LeaderboardEntry* next; // owned on the heap
@@ -278,14 +271,14 @@ Leaderboard leaderboard_new(const char* file);
 void leaderboard_close(Leaderboard* lb);
 
 /**
- * Destroys a leaderboard. This will not save and close the file poi32er. Please
+ * Destroys a leaderboard. This will not save and close the file pointer. Please
  * call `leaderboard_close()` first.
  *
  * @param lb the leaderboard to be destroyed.
  *
  */
 void leaderboard_destroy(Leaderboard* lb);
-void leaderboard_pri32(Leaderboard* lb);
+void leaderboard_print(Leaderboard* lb);
 void leaderboard_draw(Leaderboard* lb);
 void leaderboard_update(Leaderboard* lb);
 LeaderboardEntry* leaderboard_end(Leaderboard* lb);
@@ -297,7 +290,7 @@ LeaderboardEntry* leaderboard_entry_new(a_string name, time_t time, u32 score,
                                         u32 total_score, u32 rows);
 LeaderboardEntry* leaderboard_entry_from_line(const char* line);
 void leaderboard_entry_destroy(LeaderboardEntry* e);
-void leaderboard_entry_pri32(LeaderboardEntry* e);
+void leaderboard_entry_print(LeaderboardEntry* e);
 void leaderboard_entry_draw(LeaderboardEntry* e, usize index, i32 y);
 void leaderboard_entry_draw_tooltip(LeaderboardEntry* e);
 void leaderboard_entry_update(LeaderboardEntry* e);
@@ -364,13 +357,13 @@ void leaderboard_destroy(Leaderboard* lb) {
     *lb = (Leaderboard){0};
 }
 
-void leaderboard_pri32(Leaderboard* lb) {
+void leaderboard_print(Leaderboard* lb) {
     LeaderboardEntry* curr = lb->head;
     usize index = 0;
 
     while (curr != NULL) {
         eprintf("%zu | ", index);
-        leaderboard_entry_pri32(curr);
+        leaderboard_entry_print(curr);
         curr = curr->next;
         index++;
     }
@@ -573,7 +566,7 @@ void leaderboard_entry_destroy(LeaderboardEntry* e) {
     free(e);
 }
 
-void leaderboard_entry_pri32(LeaderboardEntry* e) {
+void leaderboard_entry_print(LeaderboardEntry* e) {
     eprintf("name: `%s`, time: %lu, score: %d, total_score: %d, rows: %d\n",
             e->name.data, e->time, e->score, e->total_score, e->rows);
 }

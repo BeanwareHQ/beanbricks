@@ -1,7 +1,7 @@
 3rdparty/*
 settings.h
 *.tar.gz
-brickout/
-brickout
+beanbricks/
+beanbricks
 *.o
 .vscode

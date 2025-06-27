@@ -1,11 +1,13 @@
-## brickout.c
+## beanbricks
 
-A single-file breakout clone in C and Raylib.
+A continuation of the original single-file breakout clone `brickout.c`, with minimal dependencies.
 
 ## Dependencies
 
  * Raylib
  * Raygui (bundled)
+ * `asv` (bundled)
+ * `uthash` (bundled)
 
 ## Building
 
