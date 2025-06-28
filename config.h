@@ -35,22 +35,22 @@ a_string theme_to_string(const Theme* t);
 void theme_to_cstring(const Theme* t, char* buf, usize buf_len);
 
 /*
- * Stores the corresponding `Theme` given an a_string into t.
- * Stores `NULL` if it is an invalid theme.
+ * Returns the corresponding `Theme` given an a_string.
+ * Returns -1 upon error.
  *
  * @param astr src string
  * @param t destination
  */
-void theme_from_string(const a_string* astr, Theme* dest);
+Theme theme_from_string(const a_string* astr);
 
 /*
- * Stores the corresponding `Theme` given an C string into t.
- * Stores `NULL` if it is an invalid theme.
+ * Returns the corresponding `Theme` given a C string.
+ * Returns -1 upon error.
  *
- * @param cstr src string
+ * @param astr src string
  * @param t destination
  */
-void theme_from_cstring(const char* cstr, Theme* dest);
+Theme theme_from_cstring(const char* cstr);
 
 bool theme_cmp_to_string(const Theme* t, const a_string* other);
 bool theme_cmp_to_cstring(const Theme* t, const char* other);

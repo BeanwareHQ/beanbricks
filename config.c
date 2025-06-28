@@ -8,7 +8,6 @@
  *
  * INFO: A basic config system with cJSON.
  */
-#include <stdlib.h>
 #define _POSIX_C_SOURCE 200809L
 
 #include <string.h>
@@ -44,25 +43,25 @@ void theme_to_cstring(const Theme* t, char* buf, usize buf_len) {
     strncpy(buf, res, buf_len);
 }
 
-void theme_from_string(const a_string* astr, Theme* dest) {
-    theme_from_cstring(astr->data, dest);
+Theme theme_from_string(const a_string* astr) {
+    return theme_from_cstring(astr->data);
 }
 
-void theme_from_cstring(const char* cstr, Theme* dest) {
+Theme theme_from_cstring(const char* cstr) {
     if (!strcmp(cstr, "default")) {
-        *dest = THEME_DEFAULT;
+        return THEME_DEFAULT;
     } else if (!strcmp(cstr, "dark")) {
-        *dest = THEME_DARK;
+        return THEME_DARK;
     } else if (!strcmp(cstr, "catppuccin_latte")) {
-        *dest = THEME_CTP_LATTE;
+        return THEME_CTP_LATTE;
     } else if (!strcmp(cstr, "catppuccin_frappe")) {
-        *dest = THEME_CTP_FRAPPE;
+        return THEME_CTP_FRAPPE;
     } else if (!strcmp(cstr, "catppuccin_macchiato")) {
-        *dest = THEME_CTP_MACCHIATO;
+        return THEME_CTP_MACCHIATO;
     } else if (!strcmp(cstr, "catppuccin_mocha")) {
-        *dest = THEME_CTP_MOCHA;
+        return THEME_CTP_MOCHA;
     } else {
-        dest = NULL;
+        return -1;
     }
 }
 
@@ -149,9 +148,11 @@ a_string config_to_json(const Config* cfg) {
 end:
     cJSON_Delete(res);
     if (res_str == NULL) {
-        return a_string_new_uninitialized();
+        panic("creating JSON object from config failed.");
     } else {
-        return astr(res_str);
+        a_string res = astr(res_str);
+        free(res_str);
+        return res;
     }
 }
 
@@ -159,4 +160,95 @@ Config config_from_json(const a_string* str) {
     return config_from_json_cstr(str->data);
 }
 
-Config config_from_json_cstr(const char* str) {}
+Config config_from_json_cstr(const char* str) {
+    Config res = {0};
+    const char* err;
+
+    cJSON* json = cJSON_Parse(str);
+    if (json == NULL) {
+        err = cJSON_GetErrorPtr();
+        panic("parsing JSON into Config failed: %s", err);
+    }
+
+    cJSON* theme_cjson = cJSON_GetObjectItemCaseSensitive(json, "theme");
+    if (!(cJSON_IsString(theme_cjson) && theme_cjson->valuestring != NULL)) {
+        panic("expected type string for field \"theme\", got something else");
+    }
+    Theme theme = theme_from_cstring(theme_cjson->valuestring);
+    if (theme == -1) {
+        panic("invalid theme name %s", theme_cjson->valuestring);
+    }
+    res.theme = theme;
+
+    cJSON* win_width_cjson = cJSON_GetObjectItemCaseSensitive(json, "winWidth");
+    if (!cJSON_IsNumber(win_width_cjson)) {
+        panic(
+            "expected type number for field \"win_width\", got something else");
+    }
+    res.win_width = (u16)theme_cjson->valueint;
+
+    cJSON* win_height_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "winHeight");
+    if (!cJSON_IsNumber(win_height_cjson)) {
+        panic("expected type number for field \"win_height\", got something "
+              "else");
+    }
+    res.win_height = (u16)win_height_cjson->valueint;
+
+    cJSON* paddle_width_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "paddleWidth");
+    if (!cJSON_IsNumber(paddle_width_cjson)) {
+        panic("expected type number for field \"paddle_width\", got something "
+              "else");
+    }
+    res.paddle_width = (u16)paddle_width_cjson->valueint;
+
+    cJSON* paddle_height_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "paddleHeight");
+    if (!cJSON_IsNumber(paddle_height_cjson)) {
+        panic("expected type number for field \"paddle_height\", got something "
+              "else");
+    }
+    res.paddle_height = (u16)paddle_height_cjson->valueint;
+
+    cJSON* initial_paddle_speed_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "initialPaddleSpeed");
+    if (!cJSON_IsNumber(initial_paddle_speed_cjson)) {
+        panic("expected type number for field \"initial_paddle_speed\", got "
+              "something else");
+    }
+    res.initial_paddle_speed = (u16)initial_paddle_speed_cjson->valueint;
+
+    cJSON* layers_cjson = cJSON_GetObjectItemCaseSensitive(json, "layers");
+    if (!cJSON_IsNumber(layers_cjson)) {
+        panic("expected type number for field \"layers\", got something else");
+    }
+    res.layers = (u16)layers_cjson->valueint;
+
+    cJSON* brick_width_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "brickWidth");
+    if (!cJSON_IsNumber(brick_width_cjson)) {
+        panic("expected type number for field \"brick_width\", got something "
+              "else");
+    }
+    res.brick_width = (u16)brick_width_cjson->valueint;
+
+    cJSON* brick_height_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "brickHeight");
+    if (!cJSON_IsNumber(brick_height_cjson)) {
+        panic("expected type number for field \"brick_height\", got something "
+              "else");
+    }
+    res.brick_height = (u16)brick_height_cjson->valueint;
+
+    cJSON* ball_radius_cjson =
+        cJSON_GetObjectItemCaseSensitive(json, "ballRadius");
+    if (!cJSON_IsNumber(ball_radius_cjson)) {
+        panic("expected type number for field \"ball_radius\", got something "
+              "else");
+    }
+    res.ball_radius = (u16)ball_radius_cjson->valueint;
+
+    cJSON_Delete(json);
+    return res;
+}
