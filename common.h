@@ -26,12 +26,6 @@ typedef signed long long int i64;
 typedef float f32;
 typedef double f64;
 
-#define PADDLE_DEFAULT_X (i32)((WINWIDTH / 2) - (PADDLE_WIDTH / 2))
-#define PADDLE_DEFAULT_Y (i32)(WINHEIGHT - 75)
-
-#define NUM_BRICKS    (i32)(WINWIDTH / (BRICK_WIDTH + 20))
-#define BRICK_PADDING (i32)((WINWIDTH - NUM_BRICKS * (BRICK_WIDTH + 20)) / 2)
-
 #define LENGTH(lst) (i32)(sizeof(lst) / sizeof(lst[0]))
 
 #define S_BOLD "\033[1m"
@@ -77,12 +71,12 @@ typedef double f64;
 
 #define panic(...)                                                             \
     {                                                                          \
-        eprintf("\033[31;1mpanic:\033[0m line `%d`, func `%s` in file `%s`: "  \
-                "`",                                                           \
+        eprintf("\033[31;1mpanic:\033[0m line %d, func \"%s\" in file "        \
+                "\"%s\": ",                                                    \
                 __LINE__, __func__, __FILE__);                                 \
         eprintf(__VA_ARGS__);                                                  \
         eprintf(S_DIM                                                          \
-                "`\n       please report this to the developer.\n" S_END);     \
+                "\n       please report this to the developer.\n" S_END);      \
         exit(1);                                                               \
     }
 

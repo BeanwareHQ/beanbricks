@@ -5,12 +5,13 @@ LIBS = $(shell pkg-config --cflags --libs raylib) -lm
 CJSON_VERSION=1.7.18
 
 OBJ = beanbricks.o config.o 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
+SRC = beanbricks.c config.c
+HEADERS = common.h config.h theme.h
 
 RELEASE_CFLAGS = -O2 -Wall -Wextra -pedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
 DEBUG_CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
-TARBALLFILES = Makefile LICENSE.md README.md beanbricks.c settings.def.h 3rdparty assets
+TARBALLFILES = Makefile LICENSE.md README.md 3rdparty assets $(SRC) $(HEADERS)
 
-HEADERS = settings.h
 
 TARGET=debug
 
@@ -23,12 +24,7 @@ endif
 beanbricks: setup $(OBJ)
 	$(CC) $(CFLAGS) -o beanbricks $(OBJ)
 
-setup: deps settings
-
-settings:
-	test -f settings.h || make defaults
-
-beanbricks.o: settings.h
+setup: deps
 
 dep_raylib:
 	mkdir -p 3rdparty/include
@@ -36,13 +32,13 @@ dep_raylib:
 	
 dep_asv:
 	mkdir -p 3rdparty/include
-	test -d 3rdparty/asv || curl -fL -o 3rdparty/asv.zip https://github.com/ezntek/asv/archive/refs/heads/main.zip && unzip 3rdparty/asv.zip -d 3rdparty && mv 3rdparty/asv-main 3rdparty/asv 
+	test -d 3rdparty/asv || sh -c "curl -fL -o 3rdparty/asv.zip https://github.com/ezntek/asv/archive/refs/heads/main.zip; unzip 3rdparty/asv.zip -d 3rdparty; mv 3rdparty/asv-main 3rdparty/asv"
 	test -f 3rdparty/asv/asv.o || make -C 3rdparty/asv
 	cp 3rdparty/asv/*.h 3rdparty/include/
 
 dep_cjson:
 	mkdir -p 3rdparty/include
-	test -d 3rdparty/cJSON || curl -fL -o 3rdparty/cJSON.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v${CJSON_VERSION}.tar.gz && tar xpf 3rdparty/cJSON.tar.gz -C 3rdparty/ && mv 3rdparty/cJSON-${CJSON_VERSION} 3rdparty/cJSON && make -C 3rdparty/cJSON && cp 3rdparty/cJSON/*.h 3rdparty/include/
+	test -d 3rdparty/cJSON || sh -c "curl -fL -o 3rdparty/cJSON.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v${CJSON_VERSION}.tar.gz; tar xpf 3rdparty/cJSON.tar.gz -C 3rdparty/; mv 3rdparty/cJSON-${CJSON_VERSION} 3rdparty/cJSON; make -C 3rdparty/cJSON; cp 3rdparty/cJSON/*.h 3rdparty/include/"
 
 deps: dep_raylib dep_asv dep_cjson
 		

@@ -81,3 +81,17 @@ typedef struct {
 a_string config_to_json(const Config* cfg);
 Config config_from_json(const a_string* str);
 Config config_from_json_cstr(const char* str);
+
+#define DEFAULT_CONFIG                                                         \
+    ((Config){                                                                 \
+        .theme = THEME_DEFAULT,                                                \
+        .win_width = 600,                                                      \
+        .win_height = 800,                                                     \
+        .paddle_width = 100,                                                   \
+        .paddle_height = 20,                                                   \
+        .initial_paddle_speed = 6,                                             \
+        .layers = 5,                                                           \
+        .brick_width = 50,                                                     \
+        .brick_height = 12,                                                    \
+        .ball_radius = 10,                                                     \
+    })

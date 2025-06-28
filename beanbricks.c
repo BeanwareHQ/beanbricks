@@ -20,11 +20,13 @@
 
 #include <raylib.h>
 
+#include "3rdparty/include/a_string.h"
+#include "assets/themes.h"
 #include "common.h"
-#include "settings.h"
+#include "config.h"
+#include "theme.h"
 
 #define RAYGUI_IMPLEMENTATION
-#include "3rdparty/include/a_string.h"
 #include "3rdparty/include/raygui.h"
 
 #define VERSION "0.2.0-pre"
@@ -44,6 +46,33 @@
     "    --help: show this help screen\n"                                      \
     "    --version: show the version of the program\n"
 
+#define WIN_WIDTH            (cfg.win_width)
+#define WIN_HEIGHT           (cfg.win_height)
+#define PADDLE_WIDTH         (cfg.paddle_width)
+#define PADDLE_HEIGHT        (cfg.paddle_height)
+#define INITIAL_PADDLE_SPEED (cfg.initial_paddle_speed)
+#define LAYERS               (cfg.layers)
+#define BRICK_WIDTH          (cfg.brick_width)
+#define BRICK_HEIGHT         (cfg.brick_height)
+#define BALL_RADIUS          (cfg.ball_radius)
+
+#define BG_COLOR            (color(theme->bg_color))
+#define DARK_SURFACE_COLOR  (color(theme->dark_surface_color))
+#define LIGHT_SURFACE_COLOR (color(theme->light_surface_color))
+#define BALL_COLOR          (color(theme->ball_color))
+#define TXT_PRIMARY         (color(theme->txt_primary))
+#define TXT_SECONDARY       (color(theme->txt_secondary))
+#define BRICK_COLORS        (theme->brick_colors)
+
+// TODO: refactor
+#define LEADERBOARD_ENTRY_HEIGHT 30  // height of one leaderboard item
+#define LEADERBOARD_ENTRY_WIDTH  400 // width of one leaderboard item
+#define PADDLE_DEFAULT_X         (i32)((cfg.win_width / 2) - (cfg.paddle_width / 2))
+#define PADDLE_DEFAULT_Y         (i32)(cfg.win_height - 75)
+#define NUM_BRICKS               (i32)(WIN_WIDTH / (BRICK_WIDTH + 20))
+#define BRICK_PADDING            (i32)((WIN_WIDTH - NUM_BRICKS * (BRICK_WIDTH + 20)) / 2)
+#define SPEED                    1
+
 // color is a hex code, rgb
 Color color(i32 color) {
     // copied from somewhere
@@ -53,100 +82,6 @@ Color color(i32 color) {
 
     return (Color){r, g, b, 0xFF};
 }
-
-#if THEME == THEME_DARK
-// dark theme
-const i32 BRICK_COLORS[] = {
-    [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
-    [5] = 0x0079f1, [6] = 0xc87aff, [7] = 0x873cbe,
-};
-#define BG_COLOR            0x10101a
-#define BALL_COLOR          0xc8c8c8
-#define TXT_PRIMARY_COLOR   0xffffff
-#define TXT_SECONDARY_COLOR 0xf5f5f5
-#elif THEME == THEME_CTP_MOCHA
-#define LOAD_RAYGUI_STYLE()                                                    \
-    {                                                                          \
-        return;                                                                \
-    }
-// mocha
-const i32 BRICK_COLORS[] = {
-    [1] = 0xf38ba8, [2] = 0xfab387, [3] = 0xf9e2af, [4] = 0xa6e3a1,
-    [5] = 0x74c7ec, [6] = 0x89b4fa, [7] = 0xb4befe,
-};
-#define BG_COLOR            0x1e1e2e
-#define BALL_COLOR          0x9399b2
-#define TXT_PRIMARY_COLOR   0xcdd6f4
-#define TXT_SECONDARY_COLOR 0xbac2de
-#include "assets/catppuccinmochamauve.h"
-extern void GuiLoadStyleCatppuccinMochaMauve(void);
-#define LOAD_RAYGUI_STYLE()                                                    \
-    {                                                                          \
-        GuiLoadStyleCatppuccinMochaMauve();                                    \
-    }
-#elif THEME == THEME_CTP_MACCHIATO
-// macchiato
-const i32 BRICK_COLORS[] = {
-    [1] = 0xed8796, [2] = 0xf5a97f, [3] = 0xeed49f, [4] = 0xa6da95,
-    [5] = 0x7dc4e4, [6] = 0x8aadf4, [7] = 0xb7bdf8,
-};
-#define BG_COLOR            0x24273a
-#define DARK_SURFACE_COLOR  0x363a4f
-#define LIGHT_SURFACE_COLOR 0x494d64
-#define BALL_COLOR          0x939ab7
-#define TXT_PRIMARY_COLOR   0xcad3f5
-#define TXT_SECONDARY_COLOR 0xb8c0e0
-#include "assets/catppuccinmacchiatosapphire.h"
-extern void GuiLoadStyleCatppuccinMacchiatoSapphire(void);
-#define LOAD_RAYGUI_STYLE()                                                    \
-    {                                                                          \
-        GuiLoadStyleCatppuccinMacchiatoSapphire();                             \
-    }
-#elif THEME == THEME_CTP_FRAPPE
-// frappe
-const i32 BRICK_COLORS[] = {
-    [1] = 0xe78284, [2] = 0xef9f76, [3] = 0xe5c890, [4] = 0xa6d189,
-    [5] = 0x85c1dc, [6] = 0x8caaee, [7] = 0xbabbf1};
-#define BG_COLOR            0x303446
-#define BALL_COLOR          0x949cbb
-#define TXT_PRIMARY_COLOR   0xc6d0f5
-#define TXT_SECONDARY_COLOR 0xb5bfe2
-#include "assets/catppuccinfrappesapphire.h"
-extern void GuiLoadStyleCatppuccinFrappeSapphire(void);
-#define LOAD_RAYGUI_STYLE()                                                    \
-    {                                                                          \
-        GuiLoadStyleCatppuccinFrappeSapphire();                                \
-    }
-#elif THEME == THEME_CTP_LATTE
-// frappe
-const i32 BRICK_COLORS[] = {
-    [1] = 0xd20f39, [2] = 0xfe640b, [3] = 0xdf8e1d, [4] = 0x40a02b,
-    [5] = 0x04a5e5, [6] = 0x1e66f5, [7] = 0x7287fd,
-};
-#define BG_COLOR            0xeff1f5
-#define BALL_COLOR          0x6c6f85
-#define TXT_PRIMARY_COLOR   0x4c4f69
-#define TXT_SECONDARY_COLOR 0x4c4f69
-#include "assets/catppuccinlattesapphire.h"
-extern void GuiLoadStyleCatppuccinLatteSapphire(void);
-#define LOAD_RAYGUI_STYLE()                                                    \
-    {                                                                          \
-        GuiLoadStyleCatppuccinLatteSapphire();                                 \
-    }
-#else
-const i32 BRICK_COLORS[] = {
-    [1] = 0xe62937, [2] = 0xffa100, [3] = 0xffcb00, [4] = 0x00e4e0,
-    [5] = 0x0079f1, [6] = 0xc87aff, [7] = 0x873cbe,
-};
-#define BG_COLOR            0xf5f5f5
-#define BALL_COLOR          0x828282
-#define TXT_PRIMARY_COLOR   0x000000
-#define TXT_SECONDARY_COLOR 0x505050
-#define LOAD_RAYGUI_STYLE()                                                    \
-    {                                                                          \
-        return;                                                                \
-    }
-#endif
 
 typedef struct {
     f64 x;
@@ -195,6 +130,11 @@ typedef struct {
 } TitleScreenGui;
 
 typedef struct {
+    Brick* data;
+    bool* status;
+} Bricks;
+
+typedef struct {
     Paddle paddle;
     Ball ball;
     GameGui gui;
@@ -203,7 +143,7 @@ typedef struct {
     i32 paddle_speed;
     bool paused;
     bool exit_overlay;
-    Brick bricks[LAYERS][NUM_BRICKS];
+    Bricks bricks;
 } GameState;
 
 typedef struct {
@@ -217,6 +157,7 @@ typedef struct {
     TitleScreenState title_screen;
     WinDeadGui win_dead_gui;
     Screen screen;
+    ThemeSpec theme;
 } State;
 
 typedef struct LeaderboardEntry {
@@ -240,14 +181,23 @@ typedef struct {
 bool should_close = false;
 static u32 maxscore;
 
+// The global config singleton (sorry no singleton pattern. this is C.)
+static Config cfg;
+
 // The global game state (sorry rustaceans)
 static State s;
 
 // Reference to s.game
 static GameState* const gs = &s.game;
 
+// Reference to s.game.bricks
+static Bricks* const bricks = &gs->bricks;
+
 // Reference to s.title_screen
 static TitleScreenState* const tss = &s.title_screen;
+
+// Reference to s.theme
+static ThemeSpec* const theme = &s.theme;
 
 // the leaderboard
 static Leaderboard lb = {0};
@@ -300,7 +250,12 @@ void leaderboard_entry_update(LeaderboardEntry* e);
 i32 get_bounce_offset(const Ball* ball);
 
 // Populates the bricks.
+void init_bricks(void);
 void make_bricks(void);
+void free_bricks(void);
+
+void load_config(void);
+void load_theme(void);
 
 void draw_game_bricks(void);
 void draw_game_hud_left(void);
@@ -381,8 +336,8 @@ void leaderboard_draw(Leaderboard* lb) {
         char* txt = "leaderboard empty... play a game to get started!";
         i32 txtsz = 20;
         i32 txt_width = MeasureText(txt, txtsz);
-        DrawText(txt, (i32)(WINWIDTH / 2 - txt_width / 2), y, txtsz,
-                 color(TXT_SECONDARY_COLOR));
+        DrawText(txt, (i32)(WIN_WIDTH / 2 - txt_width / 2), y, txtsz,
+                 TXT_SECONDARY);
         return;
     }
 
@@ -405,7 +360,7 @@ void leaderboard_update(Leaderboard* lb) {
     LeaderboardEntry* curr = lb->head;
     usize index = 0;
     usize y = 350;
-    usize x = (WINWIDTH / 2) - (LEADERBOARD_ENTRY_WIDTH / 2);
+    usize x = (WIN_WIDTH / 2) - (LEADERBOARD_ENTRY_WIDTH / 2);
 
     Rectangle lb_entry_rec = {
         .x = x,
@@ -573,7 +528,7 @@ void leaderboard_entry_print(LeaderboardEntry* e) {
 }
 
 void leaderboard_entry_draw(LeaderboardEntry* e, usize index, i32 y) {
-    const i32 BEGIN = WINWIDTH / 2 - LEADERBOARD_ENTRY_WIDTH / 2;
+    const i32 BEGIN = WIN_WIDTH / 2 - LEADERBOARD_ENTRY_WIDTH / 2;
     const i32 RANKING_BOX_WIDTH = MeasureText("00", 20) + 10; // +padding
 
     const Rectangle box = {
@@ -594,14 +549,14 @@ void leaderboard_entry_draw(LeaderboardEntry* e, usize index, i32 y) {
     snprintf(buf, sizeof(buf), "%02zu", index + 1);
     const i32 RANKING_TEXT_WIDTH = MeasureText(buf, 20);
 
-    DrawRectangleRec(box, color(DARK_SURFACE_COLOR));
-    DrawRectangleRec(ranking_rec, color(LIGHT_SURFACE_COLOR));
+    DrawRectangleRec(box, DARK_SURFACE_COLOR);
+    DrawRectangleRec(ranking_rec, LIGHT_SURFACE_COLOR);
 
     DrawText(buf, BEGIN + (RANKING_BOX_WIDTH / 2 - RANKING_TEXT_WIDTH / 2),
-             y + 5, 20, color(TXT_PRIMARY_COLOR));
+             y + 5, 20, TXT_PRIMARY);
 
     DrawText(e->name.data, BEGIN + RANKING_BOX_WIDTH + 10, y + 5, 20,
-             color(TXT_SECONDARY_COLOR));
+             TXT_SECONDARY);
 }
 
 void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
@@ -650,13 +605,13 @@ void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
     contents.height -= 4;
 
     DrawRectangleRec(bounds, color(BRICK_COLORS[5]));
-    DrawRectangleRec(contents, color(DARK_SURFACE_COLOR));
+    DrawRectangleRec(contents, DARK_SURFACE_COLOR);
 
-    DrawText("Stats", txt_x, txt_y, 30, color(TXT_PRIMARY_COLOR));
+    DrawText("Stats", txt_x, txt_y, 30, TXT_PRIMARY);
     txt_y += 35;
 
     for (usize i = 0; i < LENGTH(rows); i++) {
-        DrawText(rows[i], txt_x, txt_y, 20, color(TXT_SECONDARY_COLOR));
+        DrawText(rows[i], txt_x, txt_y, 20, TXT_SECONDARY);
         txt_y += 25;
     }
 }
@@ -675,7 +630,22 @@ i32 get_bounce_offset(const Ball* ball) {
     return result + 0.2;
 }
 
+void init_bricks(void) {
+    usize nmemb = NUM_BRICKS * LAYERS;
+    bricks->data = calloc(nmemb, sizeof(Brick));
+    check_alloc(bricks->data);
+    bricks->status = calloc(nmemb, sizeof(bool));
+    check_alloc(bricks->status);
+}
+
 void make_bricks(void) {
+    if (bricks->data == NULL) {
+        init_bricks();
+    } else {
+        memset(bricks->data, 0, NUM_BRICKS * LAYERS * sizeof(Brick));
+        memset(bricks->status, 0, NUM_BRICKS * LAYERS * sizeof(bool));
+    }
+
     i32 cur_x = BRICK_PADDING + 10;
     i32 cur_y = 60;
     i32 starting_x = cur_x;
@@ -683,7 +653,8 @@ void make_bricks(void) {
     for (usize layer = 0; layer < LAYERS; layer++) {
         for (usize i = 0; i < NUM_BRICKS; i++) {
             Rectangle rec = {cur_x, cur_y, BRICK_WIDTH, BRICK_HEIGHT};
-            gs->bricks[layer][i] = (Brick){rec, LAYERS - layer, true};
+            bricks->data[NUM_BRICKS * layer + i] =
+                (Brick){rec, LAYERS - layer, true};
             cur_x += BRICK_WIDTH + 20;
         }
         cur_x = starting_x;
@@ -691,10 +662,42 @@ void make_bricks(void) {
     }
 }
 
+void free_bricks(void) {
+    free(bricks->data);
+    free(bricks->status);
+}
+
+void load_config(void) {
+    // TODO: dynamic config loading
+    cfg = DEFAULT_CONFIG;
+}
+
+void load_theme(void) {
+    // TODO: dynamic theme application
+    s.theme = THEMESPEC_TBL[cfg.theme];
+    switch (theme->theme) {
+        case THEME_CTP_LATTE: {
+            GuiLoadStyleCatppuccinLatteSapphire();
+        } break;
+        case THEME_CTP_FRAPPE: {
+            GuiLoadStyleCatppuccinFrappeSapphire();
+        } break;
+        case THEME_CTP_MACCHIATO: {
+            GuiLoadStyleCatppuccinMacchiatoSapphire();
+        } break;
+        case THEME_CTP_MOCHA: {
+            GuiLoadStyleCatppuccinMochaMauve();
+        } break;
+        default: {
+            // nothing for you
+        } break;
+    }
+}
+
 void draw_game_bricks(void) {
     for (usize y = 0; y < LAYERS; y++) {
         for (usize x = 0; x < NUM_BRICKS; x++) {
-            Brick* b = &gs->bricks[y][x];
+            Brick* b = &bricks->data[NUM_BRICKS * y + x];
 
             if (b->active) {
                 DrawRectangleRec(b->rec, color(BRICK_COLORS[b->value]));
@@ -706,7 +709,7 @@ void draw_game_bricks(void) {
 void draw_game_hud_left(void) {
     char txt[20] = {0};
     snprintf(txt, sizeof(txt), "Score: %d/%d", gs->score, maxscore);
-    DrawText(txt, 20, 20, 20, color(TXT_PRIMARY_COLOR));
+    DrawText(txt, 20, 20, 20, TXT_PRIMARY);
 
 #ifdef DEBUG_INFO
     const i32 txt_width = MeasureText(txt, 20);
@@ -716,7 +719,7 @@ void draw_game_hud_left(void) {
     snprintf(spd, sizeof(spd), "Speed: %0.4f (%0.3f,%0.3f)", avg_speed,
              gs->ball.xspd, gs->ball.yspd);
 
-    DrawText(spd, 20 + txt_width + 10, 20, 20, color(TXT_SECONDARY_COLOR));
+    DrawText(spd, 20 + txt_width + 10, 20, 20, TXT_SECONDARY);
 #endif
 }
 
@@ -724,7 +727,7 @@ void draw_game_hud_right(void) {
     char buf[10] = {0};
 
     const i32 BAR_WIDTH = 150;
-    i32 BAR_X = WINWIDTH - BAR_WIDTH - 20;
+    i32 BAR_X = WIN_WIDTH - BAR_WIDTH - 20;
 
     if (gs->gui.draw) {
         BAR_X -= gs->gui.quit_button.width;
@@ -739,13 +742,13 @@ void draw_game_hud_right(void) {
     const i32 TEXT_WIDTH = MeasureText(buf, 20);
 
     if (PERCENT_BROKEN < 25) {
-        bar_color = color(BRICK_COLORS[1]); // red
+        bar_color = color(BRICK_COLORS[0]); // red
     } else if (PERCENT_BROKEN < 60) {
-        bar_color = color(BRICK_COLORS[3]); // yellow
+        bar_color = color(BRICK_COLORS[1]); // yellow
     } else if (PERCENT_BROKEN < 80) {
-        bar_color = color(BRICK_COLORS[4]); // green
+        bar_color = color(BRICK_COLORS[3]); // green
     } else {
-        bar_color = color(BRICK_COLORS[5]); // blue
+        bar_color = color(BRICK_COLORS[4]); // blue
     }
 
     const Rectangle border = {
@@ -769,10 +772,10 @@ void draw_game_hud_right(void) {
         14, // 18 - 4
     };
 
-    DrawRectangleRec(border, color(TXT_PRIMARY_COLOR));
-    DrawRectangleRec(background, color(BG_COLOR));
+    DrawRectangleRec(border, TXT_PRIMARY);
+    DrawRectangleRec(background, BG_COLOR);
     DrawRectangleRec(filling, bar_color);
-    DrawText(buf, BAR_X - TEXT_WIDTH - 10, 20, 20, color(TXT_PRIMARY_COLOR));
+    DrawText(buf, BAR_X - TEXT_WIDTH - 10, 20, 20, TXT_PRIMARY);
 }
 
 void draw_game_gui(void) {
@@ -802,11 +805,10 @@ void draw_dead(void) {
 
     i32 death_width = MeasureText(death_txt, death_txtsz);
 
-    i32 death_posx = (WINWIDTH / 2) - death_width / 2;
-    i32 death_posy = (WINHEIGHT / 2) - death_txtsz / 2;
+    i32 death_posx = (WIN_WIDTH / 2) - death_width / 2;
+    i32 death_posy = (WIN_HEIGHT / 2) - death_txtsz / 2;
 
-    DrawText(death_txt, death_posx, death_posy, death_txtsz,
-             color(TXT_PRIMARY_COLOR));
+    DrawText(death_txt, death_posx, death_posy, death_txtsz, TXT_PRIMARY);
 
     draw_game_hud_left();
     draw_game_hud_right();
@@ -819,10 +821,10 @@ void draw_win(void) {
 
     i32 win_width = MeasureText(win_txt, win_txtsz);
 
-    i32 win_posx = (WINWIDTH / 2) - win_width / 2;
-    i32 win_posy = (WINHEIGHT / 2) - win_txtsz / 2;
+    i32 win_posx = (WIN_WIDTH / 2) - win_width / 2;
+    i32 win_posy = (WIN_HEIGHT / 2) - win_txtsz / 2;
 
-    DrawText(win_txt, win_posx, win_posy, win_txtsz, color(TXT_PRIMARY_COLOR));
+    DrawText(win_txt, win_posx, win_posy, win_txtsz, TXT_PRIMARY);
 
     draw_game_hud_left();
     draw_game_hud_right();
@@ -830,7 +832,7 @@ void draw_win(void) {
 }
 
 void draw_titlescreen(void) {
-    const char* title = "Brick-out";
+    const char* title = "Beanbricks";
     i32 title_txtsz;
 
     if (tss->title_anim_stage == 0) {
@@ -840,23 +842,21 @@ void draw_titlescreen(void) {
     }
 
     i32 title_width = MeasureText(title, title_txtsz);
-    i32 title_posx = (WINWIDTH / 2) - title_width / 2;
-    i32 title_posy = WINHEIGHT * 0.16;
+    i32 title_posx = (WIN_WIDTH / 2) - title_width / 2;
+    i32 title_posy = WIN_HEIGHT * 0.16;
 
     const char* begin = "or press enter to begin";
     const i32 begin_txtsz = 20;
     i32 begin_width = MeasureText(begin, begin_txtsz);
-    i32 begin_posx = (WINWIDTH / 2) - begin_width / 2;
-    i32 begin_posy = WINHEIGHT - begin_txtsz - 20;
+    i32 begin_posx = (WIN_WIDTH / 2) - begin_width / 2;
+    i32 begin_posy = WIN_HEIGHT - begin_txtsz - 20;
 
-    DrawText(title, title_posx, title_posy, title_txtsz,
-             color(TXT_PRIMARY_COLOR));
-    DrawText(begin, begin_posx, begin_posy, begin_txtsz,
-             color(TXT_SECONDARY_COLOR));
+    DrawText(title, title_posx, title_posy, title_txtsz, TXT_PRIMARY);
+    DrawText(begin, begin_posx, begin_posy, begin_txtsz, TXT_SECONDARY);
 
     DrawText("Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025", 20, 20,
-             10, color(TXT_SECONDARY_COLOR));
-    DrawText("version " VERSION, 20, 34, 10, color(TXT_SECONDARY_COLOR));
+             10, TXT_SECONDARY);
+    DrawText("version " VERSION, 20, 34, 10, TXT_SECONDARY);
 
     draw_titlescreen_gui();
     leaderboard_draw(&lb);
@@ -879,35 +879,34 @@ void draw_settings(void) { draw_dead(); }
 
 void draw_game(void) {
     DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
-    DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, color(BALL_COLOR));
+    DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, BALL_COLOR);
     draw_game_bricks();
     draw_game_hud_left();
     draw_game_hud_right();
 
     if (gs->paused) {
-        Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
+        Rectangle darken = (Rectangle){0, 0, WIN_WIDTH, WIN_HEIGHT};
         DrawRectangleRec(darken, (Color){100, 100, 100, 100});
 
         const char* pause = "paused";
         const i32 pause_txtsz = 60;
         i32 pause_width = MeasureText(pause, pause_txtsz);
-        i32 pause_posx = (WINWIDTH / 2) - pause_width / 2;
-        i32 pause_posy = (WINHEIGHT / 2) - pause_txtsz / 2;
+        i32 pause_posx = (WIN_WIDTH / 2) - pause_width / 2;
+        i32 pause_posy = (WIN_HEIGHT / 2) - pause_txtsz / 2;
 
-        DrawText(pause, pause_posx, pause_posy, pause_txtsz,
-                 color(TXT_PRIMARY_COLOR));
+        DrawText(pause, pause_posx, pause_posy, pause_txtsz, TXT_PRIMARY);
     }
 
     if (gs->exit_overlay) {
-        Rectangle darken = (Rectangle){0, 0, WINWIDTH, WINHEIGHT};
+        Rectangle darken = (Rectangle){0, 0, WIN_WIDTH, WIN_HEIGHT};
         DrawRectangleRec(darken, (Color){100, 100, 100, 100});
 
         const char* exit = "exit?";
         const i32 exit_txtsz = 60;
         i32 exit_width = MeasureText(exit, exit_txtsz);
-        i32 exit_posx = (WINWIDTH / 2) - exit_width / 2;
+        i32 exit_posx = (WIN_WIDTH / 2) - exit_width / 2;
         i32 exit_posy =
-            (WINHEIGHT / 2) - 60; // exit_txtsz + padding + buttons = 120
+            (WIN_HEIGHT / 2) - 60; // exit_txtsz + padding + buttons = 120
 
         if (GuiButton(gs->gui.exit_overlay_yes_button,
                       GuiIconText(ICON_OK_TICK, "[Y]es"))) {
@@ -923,8 +922,7 @@ void draw_game(void) {
             return;
         }
 
-        DrawText(exit, exit_posx, exit_posy, exit_txtsz,
-                 color(TXT_PRIMARY_COLOR));
+        DrawText(exit, exit_posx, exit_posy, exit_txtsz, TXT_PRIMARY);
     }
 
     if (gs->exit_overlay || gs->paused)
@@ -966,10 +964,10 @@ void update_game_paddle(void) {
             paddle->rec.x = 0;
         }
     } else if (IsKeyDown(KEY_RIGHT)) {
-        if (paddle->rec.x + gs->paddle_speed <= WINWIDTH - PADDLE_WIDTH) {
+        if (paddle->rec.x + gs->paddle_speed <= WIN_WIDTH - PADDLE_WIDTH) {
             paddle->rec.x += gs->paddle_speed;
         } else {
-            paddle->rec.x = WINWIDTH - PADDLE_WIDTH;
+            paddle->rec.x = WIN_WIDTH - PADDLE_WIDTH;
         }
     }
 
@@ -1015,10 +1013,10 @@ void update_game_ball(void) {
 
     // ball update logic
     if (ball->xspd > 0) {
-        if (ball->x + ball->xspd < WINWIDTH - BALL_RADIUS) {
+        if (ball->x + ball->xspd < WIN_WIDTH - BALL_RADIUS) {
             gs->ball.x += gs->ball.xspd;
         } else {
-            gs->ball.x = WINWIDTH - BALL_RADIUS;
+            gs->ball.x = WIN_WIDTH - BALL_RADIUS;
             gs->ball.xspd = -gs->ball.xspd;
 
             if (ball->xspd < 0) {
@@ -1047,10 +1045,10 @@ void update_game_ball(void) {
     }
 
     if (ball->yspd > 0) {
-        if (ball->y + ball->yspd < WINHEIGHT - BALL_RADIUS) {
+        if (ball->y + ball->yspd < WIN_HEIGHT - BALL_RADIUS) {
             gs->ball.y += gs->ball.yspd;
         } else {
-            gs->ball.y = WINHEIGHT - BALL_RADIUS;
+            gs->ball.y = WIN_HEIGHT - BALL_RADIUS;
             gs->ball.yspd = -gs->ball.yspd;
         }
     } else if (ball->yspd < 0) {
@@ -1069,7 +1067,7 @@ void update_game_bricks(void) {
 
     for (usize y = 0; y < LAYERS; y++) {
         for (usize x = 0; x < NUM_BRICKS; x++) {
-            Brick* brick = &gs->bricks[y][x];
+            Brick* brick = &bricks->data[y * NUM_BRICKS + x];
 
             if (!brick->active) {
                 continue;
@@ -1275,8 +1273,8 @@ void reset_game(void) {
                      .color = ORANGE},
         .ball =
             (Ball){
-                     .x = (i32)((WINWIDTH / 2) - (BALL_RADIUS / 2)),
-                     .y = (i32)((WINHEIGHT / 2) - (BALL_RADIUS / 2)),
+                     .x = (i32)((WIN_WIDTH / 2) - (BALL_RADIUS / 2)),
+                     .y = (i32)((WIN_HEIGHT / 2) - (BALL_RADIUS / 2)),
                      .xspd = xspd,
                      .yspd = yspd,
                      .color = GRAY,
@@ -1288,12 +1286,12 @@ void reset_game(void) {
     const i32 EXIT_OVERLAY_BTNS_WIDTH =
         2 * EXIT_OVERLAY_BUTTON_WIDTH + 10; // + padding
 
-    const i32 EXIT_OVERLAY_BTNS_Y = (WINHEIGHT / 2) + 30; // padding
+    const i32 EXIT_OVERLAY_BTNS_Y = (WIN_HEIGHT / 2) + 30; // padding
     const i32 EXIT_OVERLAY_BUTTONS_BEGIN =
-        (i32)(WINWIDTH / 2 - EXIT_OVERLAY_BTNS_WIDTH / 2);
+        (i32)(WIN_WIDTH / 2 - EXIT_OVERLAY_BTNS_WIDTH / 2);
 
     gs->gui = (GameGui){
-        .quit_button = (Rectangle){.x = WINWIDTH - 20 - QUIT_BUTTON_WIDTH,
+        .quit_button = (Rectangle){.x = WIN_WIDTH - 20 - QUIT_BUTTON_WIDTH,
                                    .y = 20,
                                    .width = QUIT_BUTTON_WIDTH,
                                    .height = 19},
@@ -1315,19 +1313,19 @@ void reset_game(void) {
 void reset_win_or_dead_gui(void) {
     const i32 BUTTON_WIDTH = 120;
     const i32 BUTTONS_WIDTH = 3 * BUTTON_WIDTH + 20; // + 2*padding
-    const i32 BUTTONS_BEGIN = (i32)(WINWIDTH / 2 - BUTTONS_WIDTH / 2);
+    const i32 BUTTONS_BEGIN = (i32)(WIN_WIDTH / 2 - BUTTONS_WIDTH / 2);
 
     s.win_dead_gui = (WinDeadGui){
         .restart_button = (Rectangle){.x = BUTTONS_BEGIN,
-                                      .y = WINHEIGHT - 40,
+                                      .y = WIN_HEIGHT - 40,
                                       .width = BUTTON_WIDTH,
                                       .height = 30},
         .title_button = (Rectangle){.x = BUTTONS_BEGIN + BUTTON_WIDTH + 10,
-                                      .y = WINHEIGHT - 40,
+                                      .y = WIN_HEIGHT - 40,
                                       .width = BUTTON_WIDTH,
                                       .height = 30},
         .quit_button = (Rectangle){.x = BUTTONS_BEGIN + 2 * BUTTON_WIDTH + 20,
-                                      .y = WINHEIGHT - 40,
+                                      .y = WIN_HEIGHT - 40,
                                       .width = BUTTON_WIDTH,
                                       .height = 30},
     };
@@ -1341,9 +1339,9 @@ void reset_titlescreen(void) {
 
     const i32 BUTTON_WIDTH = 120;
     const i32 BUTTONS_WIDTH = 2 * BUTTON_WIDTH + 10; // + padding
-    const i32 BUTTONS_BEGIN = (i32)(WINWIDTH / 2 - BUTTONS_WIDTH / 2);
+    const i32 BUTTONS_BEGIN = (i32)(WIN_WIDTH / 2 - BUTTONS_WIDTH / 2);
 
-    const i32 TITLESCREEN_TEXT_Y = WINHEIGHT * 0.16; // check draw_titlescreen
+    const i32 TITLESCREEN_TEXT_Y = WIN_HEIGHT * 0.16; // check draw_titlescreen
 
     tss->gui = (TitleScreenGui){
         .start_button =
@@ -1390,11 +1388,14 @@ void handle_args(i32 argc, char* argv[argc]) {
 }
 
 void init(void) {
+    load_config();
+    load_theme();
+
     // TEST DATA (will replace later)
     lb = leaderboard_new(NULL);
 
-    InitWindow(WINWIDTH, WINHEIGHT, "shitty brick-out clone");
-    SetTargetFPS((i32)(60 / (1 / SPEED)));
+    InitWindow(WIN_WIDTH, WIN_HEIGHT, "beanbricks");
+    SetTargetFPS((i32)(60 / SPEED));
     srand(time(NULL));
     SetExitKey(KEY_NULL);
 
@@ -1402,12 +1403,11 @@ void init(void) {
         maxscore += NUM_BRICKS * i;
     }
 
-    LOAD_RAYGUI_STYLE();
-
     reset_all();
 }
 
 void deinit(void) {
+    free_bricks();
     leaderboard_destroy(&lb);
     CloseWindow();
 }
@@ -1422,7 +1422,7 @@ i32 main(i32 argc, char* argv[argc]) {
 
         update();
         BeginDrawing();
-        ClearBackground(color(BG_COLOR));
+        ClearBackground(BG_COLOR);
         draw();
         EndDrawing();
     }
