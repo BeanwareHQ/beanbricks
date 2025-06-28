@@ -10,10 +10,6 @@
 // Copyright (c) 2020-2023 raylib technologies (@raylibtech) //
 //                                                                              //
 //////////////////////////////////////////////////////////////////////////////////
-#include "../3rdparty/include/raygui.h"
-#include <stdlib.h>
-#include <string.h>
-
 #define CATPPUCCINLATTESAPPHIRE_STYLE_PROPS_COUNT 15
 
 // Custom style name: CatppuccinLatteSapphire

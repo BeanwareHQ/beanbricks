@@ -84,7 +84,7 @@ Config config_from_json_cstr(const char* str);
 
 #define DEFAULT_CONFIG                                                         \
     ((Config){                                                                 \
-        .theme = THEME_DEFAULT,                                                \
+        .theme = THEME_CTP_MACCHIATO,                                          \
         .win_width = 600,                                                      \
         .win_height = 800,                                                     \
         .paddle_width = 100,                                                   \

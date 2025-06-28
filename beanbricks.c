@@ -21,13 +21,14 @@
 #include <raylib.h>
 
 #include "3rdparty/include/a_string.h"
-#include "assets/themes.h"
 #include "common.h"
 #include "config.h"
 #include "theme.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "3rdparty/include/raygui.h"
+
+#include "assets/themes.h"
 
 #define VERSION "0.2.0-pre"
 
@@ -56,13 +57,13 @@
 #define BRICK_HEIGHT         (cfg.brick_height)
 #define BALL_RADIUS          (cfg.ball_radius)
 
-#define BG_COLOR            (color(theme->bg_color))
-#define DARK_SURFACE_COLOR  (color(theme->dark_surface_color))
-#define LIGHT_SURFACE_COLOR (color(theme->light_surface_color))
-#define BALL_COLOR          (color(theme->ball_color))
-#define TXT_PRIMARY         (color(theme->txt_primary))
-#define TXT_SECONDARY       (color(theme->txt_secondary))
-#define BRICK_COLORS        (theme->brick_colors)
+#define BG_COLOR            (color(theme.bg_color))
+#define DARK_SURFACE_COLOR  (color(theme.dark_surface_color))
+#define LIGHT_SURFACE_COLOR (color(theme.light_surface_color))
+#define BALL_COLOR          (color(theme.ball_color))
+#define TXT_PRIMARY         (color(theme.txt_primary))
+#define TXT_SECONDARY       (color(theme.txt_secondary))
+#define BRICK_COLORS        (theme.brick_colors)
 
 // TODO: refactor
 #define LEADERBOARD_ENTRY_HEIGHT 30  // height of one leaderboard item
@@ -157,7 +158,6 @@ typedef struct {
     TitleScreenState title_screen;
     WinDeadGui win_dead_gui;
     Screen screen;
-    ThemeSpec theme;
 } State;
 
 typedef struct LeaderboardEntry {
@@ -184,6 +184,9 @@ static u32 maxscore;
 // The global config singleton (sorry no singleton pattern. this is C.)
 static Config cfg;
 
+// The global theme spec
+static ThemeSpec theme;
+
 // The global game state (sorry rustaceans)
 static State s;
 
@@ -195,9 +198,6 @@ static Bricks* const bricks = &gs->bricks;
 
 // Reference to s.title_screen
 static TitleScreenState* const tss = &s.title_screen;
-
-// Reference to s.theme
-static ThemeSpec* const theme = &s.theme;
 
 // the leaderboard
 static Leaderboard lb = {0};
@@ -674,8 +674,9 @@ void load_config(void) {
 
 void load_theme(void) {
     // TODO: dynamic theme application
-    s.theme = THEMESPEC_TBL[cfg.theme];
-    switch (theme->theme) {
+    theme = THEMESPEC_TBL[cfg.theme];
+
+    switch (theme.theme) {
         case THEME_CTP_LATTE: {
             GuiLoadStyleCatppuccinLatteSapphire();
         } break;
@@ -688,9 +689,8 @@ void load_theme(void) {
         case THEME_CTP_MOCHA: {
             GuiLoadStyleCatppuccinMochaMauve();
         } break;
-        default: {
-            // nothing for you
-        } break;
+        default:
+            break;
     }
 }
 
@@ -700,7 +700,7 @@ void draw_game_bricks(void) {
             Brick* b = &bricks->data[NUM_BRICKS * y + x];
 
             if (b->active) {
-                DrawRectangleRec(b->rec, color(BRICK_COLORS[b->value]));
+                DrawRectangleRec(b->rec, color(BRICK_COLORS[b->value - 1]));
             }
         }
     }
@@ -836,9 +836,9 @@ void draw_titlescreen(void) {
     i32 title_txtsz;
 
     if (tss->title_anim_stage == 0) {
-        title_txtsz = 100;
+        title_txtsz = 90;
     } else {
-        title_txtsz = 100 + (i32)(tss->title_anim_stage / 5);
+        title_txtsz = 90 + (i32)(tss->title_anim_stage / 5);
     }
 
     i32 title_width = MeasureText(title, title_txtsz);
@@ -1266,6 +1266,9 @@ void reset_game(void) {
         xspd = -xspd;
     }
 
+    // FIXME: dont free and immediately realloc
+    free_bricks();
+
     *gs = (GameState){
         .paddle =
             (Paddle){.rec = (Rectangle){PADDLE_DEFAULT_X, PADDLE_DEFAULT_Y,
@@ -1389,7 +1392,6 @@ void handle_args(i32 argc, char* argv[argc]) {
 
 void init(void) {
     load_config();
-    load_theme();
 
     // TEST DATA (will replace later)
     lb = leaderboard_new(NULL);
@@ -1402,6 +1404,8 @@ void init(void) {
     for (usize i = 1; i <= LAYERS; i++) {
         maxscore += NUM_BRICKS * i;
     }
+
+    load_theme();
 
     reset_all();
 }

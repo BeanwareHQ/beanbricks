@@ -32,19 +32,31 @@ dep_raylib:
 	
 dep_asv:
 	mkdir -p 3rdparty/include
-	test -d 3rdparty/asv || sh -c "curl -fL -o 3rdparty/asv.zip https://github.com/ezntek/asv/archive/refs/heads/main.zip; unzip 3rdparty/asv.zip -d 3rdparty; mv 3rdparty/asv-main 3rdparty/asv"
-	test -f 3rdparty/asv/asv.o || make -C 3rdparty/asv
+	if [ ! -d 3rdparty/asv ]; then \
+		curl -fL -o "3rdparty/asv.zip" "https://github.com/ezntek/asv/archive/refs/heads/main.zip"; \
+		unzip 3rdparty/asv.zip -d 3rdparty; \
+		mv 3rdparty/asv-main 3rdparty/asv; \
+	fi
+
+	test -f 3rdparty/asv/asv.o || $(MAKE) -C 3rdparty/asv
 	cp 3rdparty/asv/*.h 3rdparty/include/
 
 dep_cjson:
 	mkdir -p 3rdparty/include
-	test -d 3rdparty/cJSON || sh -c "curl -fL -o 3rdparty/cJSON.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v${CJSON_VERSION}.tar.gz; tar xpf 3rdparty/cJSON.tar.gz -C 3rdparty/; mv 3rdparty/cJSON-${CJSON_VERSION} 3rdparty/cJSON; make -C 3rdparty/cJSON; cp 3rdparty/cJSON/*.h 3rdparty/include/"
+
+	if [ ! -d 3rdparty/cJSON ]; then \
+		curl -fL -o 3rdparty/cJSON.tar.gz https://github.com/DaveGamble/cJSON/archive/refs/tags/v$(CJSON_VERSION).tar.gz; \
+		tar xpf 3rdparty/cJSON.tar.gz -C 3rdparty/; \
+		mv 3rdparty/cJSON-$(CJSON_VERSION) 3rdparty/cJSON; \
+		$(MAKE) -C 3rdparty/cJSON; \
+		cp 3rdparty/cJSON/*.h 3rdparty/include/; \
+	fi
 
 deps: dep_raylib dep_asv dep_cjson
 		
 updatedeps:
 	rm -rf 3rdparty/*
-	make deps
+	$(MAKE) deps
 
 tarball: deps
 	mkdir -p beanbricks

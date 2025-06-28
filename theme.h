@@ -9,7 +9,9 @@
  * INFO: theme definitions
  */
 
-#pragma once
+// pragma doesnt seem to work?
+#ifndef _THEME_H
+#define _THEME_H
 
 #include "common.h"
 #include "config.h"
@@ -148,3 +150,4 @@ const ThemeSpec THEMESPEC_TBL[] = {
     [THEME_CTP_MACCHIATO] = THEMESPEC_CTP_MACCHIATO,
     [THEME_CTP_MOCHA] = THEMESPEC_CTP_MOCHA,
 };
+#endif
