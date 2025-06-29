@@ -4,14 +4,13 @@ LIBS = $(shell pkg-config --cflags --libs raylib) -lm
 
 CJSON_VERSION=1.7.18
 
-OBJ = beanbricks.o config.o 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
-SRC = beanbricks.c config.c
+OBJ = beanbricks.o config.o
+3RDPARTY_OBJ = 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
 HEADERS = common.h config.h theme.h
 
-RELEASE_CFLAGS = -O2 -Wall -Wextra -pedantic -march=native -flto=auto $(INCLUDE) $(LIBS)
-DEBUG_CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) $(LIBS)
+RELEASE_CFLAGS = -O2 -Wall -Wextra -pedantic $(INCLUDE) 
+DEBUG_CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) 
 TARBALLFILES = Makefile LICENSE.md README.md 3rdparty assets $(SRC) $(HEADERS)
-
 
 TARGET=debug
 
@@ -22,7 +21,7 @@ else
 endif
 
 beanbricks: setup $(OBJ)
-	$(CC) $(CFLAGS) -o beanbricks $(OBJ)
+	$(CC) $(LIBS) $(CFLAGS) -o beanbricks $(OBJ) $(3RDPARTY_OBJ)
 
 setup: deps
 
@@ -64,16 +63,12 @@ tarball: deps
 	tar czvf beanbricks.tar.gz beanbricks
 	rm -rf beanbricks
 
-defaults:
-	rm -f settings.h
-	cp settings.def.h settings.h
-
 cleandeps: 
 	rm -rf 3rdparty/*
 
-clean: cleandeps
-	rm -rf beanbricks beanbricks.tar.gz beanbricks $(OBJ)
+distclean: cleandeps
 
-cleanall: clean defaults
+clean:
+	rm -rf beanbricks beanbricks.tar.gz beanbricks $(OBJ)
 
 .PHONY: clean cleanall

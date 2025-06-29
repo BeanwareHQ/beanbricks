@@ -152,11 +152,11 @@ end:
     cJSON_Delete(res);
     if (res_str == NULL) {
         panic("creating JSON object from config failed.");
-    } else {
-        a_string res = astr(res_str);
-        free(res_str);
-        return res;
     }
+
+    a_string res_astr = astr(res_str);
+    free(res_str);
+    return res_astr;
 }
 
 Config config_from_json(const a_string* str) {

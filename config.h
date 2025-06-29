@@ -9,7 +9,8 @@
  * INFO: A basic config system with cJSON.
  */
 
-#pragma once
+#ifndef _CONFIG_H
+#define _CONFIG_H
 
 #include "3rdparty/include/a_string.h"
 #include "common.h"
@@ -95,3 +96,5 @@ Config config_from_json_cstr(const char* str);
         .brick_height = 12,                                                    \
         .ball_radius = 10,                                                     \
     })
+
+#endif

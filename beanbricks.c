@@ -38,9 +38,9 @@
     "Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.\n"                 \
     "This program and all source code in the project directory including "     \
     "this file is licensed under the MIT/Expat license; unless otherwise "     \
-    "stated.\n"                                                                \
+    "stated. "                                                                 \
     "View the full text of the license in the root of the project, or pass "   \
-    "--license."                                                               \
+    "--license.\n\n"                                                           \
     "usage: beanbricks [flags]\n"                                              \
     "running the program with no args will launch the game.\n\n"               \
     "options:\n"                                                               \
@@ -128,6 +128,7 @@ typedef struct {
 typedef struct {
     Rectangle start_button;
     Rectangle quit_button;
+    Rectangle settings_button;
 } TitleScreenGui;
 
 typedef struct {
@@ -190,14 +191,15 @@ static ThemeSpec theme;
 // The global game state (sorry rustaceans)
 static State s;
 
+/* TCC DOES NOT LIKE DECLARATIONS HERE*/
 // Reference to s.game
-static GameState* const gs = &s.game;
+static GameState* gs;
 
 // Reference to s.game.bricks
-static Bricks* const bricks = &gs->bricks;
+static Bricks* bricks;
 
 // Reference to s.title_screen
-static TitleScreenState* const tss = &s.title_screen;
+static TitleScreenState* tss;
 
 // the leaderboard
 static Leaderboard lb = {0};
@@ -616,7 +618,11 @@ void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
     }
 }
 
-void leaderboard_entry_update(LeaderboardEntry* e) { return; }
+void leaderboard_entry_update(LeaderboardEntry* e) {
+    // suppress warning
+    e = e;
+    return;
+}
 
 // game related functions
 
@@ -650,8 +656,9 @@ void make_bricks(void) {
     i32 cur_y = 60;
     i32 starting_x = cur_x;
 
-    for (i32 layer = 0; layer < LAYERS; layer++) {
-        for (i32 i = 0; i < NUM_BRICKS; i++) {
+    // suppress -Wsign-compare
+    for (usize layer = 0; layer < (usize)LAYERS; layer++) {
+        for (usize i = 0; i < (usize)NUM_BRICKS; i++) {
             Rectangle rec = {cur_x, cur_y, BRICK_WIDTH, BRICK_HEIGHT};
             bricks->data[NUM_BRICKS * layer + i] =
                 (Brick){rec, LAYERS - layer, true};
@@ -702,7 +709,8 @@ void load_theme(void) {
 
 void draw_game_bricks(void) {
     for (usize y = 0; y < LAYERS; y++) {
-        for (usize x = 0; x < NUM_BRICKS; x++) {
+        // suppress -Wsign-compare
+        for (usize x = 0; x < (usize)NUM_BRICKS; x++) {
             Brick* b = &bricks->data[NUM_BRICKS * y + x];
 
             if (b->active) {
@@ -892,9 +900,20 @@ void draw_titlescreen_gui(void) {
         should_close = true;
         return;
     }
+
+    if (GuiButton(tss->gui.settings_button,
+                  GuiIconText(ICON_GEAR, "[S]ettings"))) {
+        s.screen = SCR_SETTINGS;
+    }
 }
 
-void draw_settings(void) { draw_dead(); }
+void draw_settings(void) {
+    const char* txt = "nothing to see here...";
+    const i32 txt_width = MeasureText(txt, 20);
+    const i32 txt_x = WIN_WIDTH / 2 - txt_width / 2;
+    const i32 txt_y = WIN_HEIGHT / 2 - 10;
+    DrawText(txt, txt_x, txt_y, 20, TXT_PRIMARY);
+}
 
 void draw_game(void) {
     DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
@@ -1085,7 +1104,8 @@ void update_game_bricks(void) {
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
     for (usize y = 0; y < LAYERS; y++) {
-        for (usize x = 0; x < NUM_BRICKS; x++) {
+        // suppress -Wsign-compare
+        for (usize x = 0; x < (usize)NUM_BRICKS; x++) {
             Brick* brick = &bricks->data[y * NUM_BRICKS + x];
 
             if (!brick->active) {
@@ -1176,7 +1196,12 @@ void update_titlescreen(void) {
     leaderboard_update(&lb);
 }
 
-void update_settings(void) { update_dead(); }
+void update_settings(void) {
+    if (IsKeyPressed(KEY_Q)) {
+        reset_titlescreen();
+        s.screen = SCR_TITLE;
+    }
+}
 
 void update_game(void) {
     Paddle* paddle = &gs->paddle;
@@ -1227,9 +1252,9 @@ void update_game(void) {
         if (IsKeyPressed(KEY_N)) {
             gs->exit_overlay = false; // back
         } else if (IsKeyPressed(KEY_Y)) {
-            s.screen = SCR_TITLE;
             reset_titlescreen();
             reset_game();
+            s.screen = SCR_TITLE;
             return;
         }
 
@@ -1359,9 +1384,12 @@ void reset_titlescreen(void) {
         .title_anim_growing = true,
     };
 
+    const i32 NBUTTONS = 3;
     const i32 BUTTON_WIDTH = 120;
-    const i32 BUTTONS_WIDTH = 2 * BUTTON_WIDTH + 10; // + padding
-    const i32 BUTTONS_BEGIN = (i32)(WIN_WIDTH / 2 - BUTTONS_WIDTH / 2);
+    const i32 BUTTONS_WIDTH =
+        (NBUTTONS - 1) * BUTTON_WIDTH + (NBUTTONS - 1) * 10; // + padding
+    const i32 BUTTONS_BEGIN =
+        (i32)(WIN_WIDTH / NBUTTONS - BUTTONS_WIDTH / NBUTTONS);
 
     const i32 TITLESCREEN_TEXT_Y = WIN_HEIGHT * 0.16; // check draw_titlescreen
 
@@ -1373,8 +1401,15 @@ void reset_titlescreen(void) {
                         .width = BUTTON_WIDTH,
                         .height = 30,
                         },
-        .quit_button = (Rectangle){
+        .quit_button =
+            (Rectangle){
                         .x = BUTTONS_BEGIN + BUTTON_WIDTH + 10,
+                        .y = TITLESCREEN_TEXT_Y + 140,
+                        .width = BUTTON_WIDTH,
+                        .height = 30,
+                        },
+        .settings_button = (Rectangle){
+                        .x = BUTTONS_BEGIN + 2 * BUTTON_WIDTH + 20,
                         .y = TITLESCREEN_TEXT_Y + 140,
                         .width = BUTTON_WIDTH,
                         .height = 30,
@@ -1410,6 +1445,11 @@ void handle_args(i32 argc, char* argv[argc]) {
 }
 
 void init(void) {
+    // set up globals
+    gs = &s.game;
+    bricks = &gs->bricks;
+    tss = &s.title_screen;
+
     SetTraceLogLevel(LOG_ERROR);
     info("initializing beanbricks version " VERSION);
 

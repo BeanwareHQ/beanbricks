@@ -9,7 +9,8 @@
  * INFO: common declarations
  */
 
-#pragma once
+#ifndef _COMMON_H
+#define _COMMON_H
 
 #include <stdio.h>
 
@@ -109,3 +110,5 @@ typedef double f64;
         eprintf(__VA_ARGS__);                                                  \
         eprintf(S_END "\n");                                                   \
     }
+
+#endif
