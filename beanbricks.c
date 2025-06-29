@@ -650,8 +650,8 @@ void make_bricks(void) {
     i32 cur_y = 60;
     i32 starting_x = cur_x;
 
-    for (usize layer = 0; layer < LAYERS; layer++) {
-        for (usize i = 0; i < NUM_BRICKS; i++) {
+    for (i32 layer = 0; layer < LAYERS; layer++) {
+        for (i32 i = 0; i < NUM_BRICKS; i++) {
             Rectangle rec = {cur_x, cur_y, BRICK_WIDTH, BRICK_HEIGHT};
             bricks->data[NUM_BRICKS * layer + i] =
                 (Brick){rec, LAYERS - layer, true};
@@ -668,8 +668,14 @@ void free_bricks(void) {
 }
 
 void load_config(void) {
-    // TODO: dynamic config loading
-    cfg = DEFAULT_CONFIG;
+    // FIXME: shitcode
+
+    const char* filepath = "./config.json";
+    a_string contents = a_string_read_file(filepath);
+    cfg = config_from_json(&contents);
+    a_string_free(&contents);
+
+    info("loaded configuration at \"%s\"", filepath);
 }
 
 void load_theme(void) {
@@ -712,14 +718,27 @@ void draw_game_hud_left(void) {
     DrawText(txt, 20, 20, 20, TXT_PRIMARY);
 
 #ifdef DEBUG_INFO
-    const i32 txt_width = MeasureText(txt, 20);
-    char spd[30] = {0};
+    Color col = LIGHTGRAY;
+    col.a = 30;
+    i32 debug_txt_width = MeasureText(txt, 20);
+    char debug_txt_buf[30] = {0};
     const f64 avg_speed = (double)sqrt(gs->ball.xspd * gs->ball.xspd +
                                        gs->ball.yspd * gs->ball.yspd);
-    snprintf(spd, sizeof(spd), "Speed: %0.4f (%0.3f,%0.3f)", avg_speed,
-             gs->ball.xspd, gs->ball.yspd);
-
-    DrawText(spd, 20 + txt_width + 10, 20, 20, TXT_SECONDARY);
+    snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Speed: %0.4f (%0.3f,%0.3f)",
+             avg_speed, gs->ball.xspd, gs->ball.yspd);
+    debug_txt_width = MeasureText(debug_txt_buf, 10);
+    DrawRectangle(0, 38, debug_txt_width + 30, 10, col);
+    DrawText(debug_txt_buf, 20, 40, 10, TXT_SECONDARY);
+    debug_txt_width = MeasureText(debug_txt_buf, 10);
+    snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Position: (%0.3f, %0.3f)",
+             gs->ball.x, gs->ball.y);
+    DrawRectangle(0, 48, debug_txt_width + 30, 10, col);
+    DrawText(debug_txt_buf, 20, 50, 10, TXT_SECONDARY);
+    debug_txt_width = MeasureText(debug_txt_buf, 10);
+    snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Paddle: (%0.3f, %0.3f)",
+             gs->paddle.rec.x, gs->paddle.rec.y);
+    DrawRectangle(0, 58, debug_txt_width + 30, 12, col);
+    DrawText(debug_txt_buf, 20, 60, 10, TXT_SECONDARY);
 #endif
 }
 
@@ -1248,7 +1267,7 @@ void reset_game(void) {
     i32 xspd;
     i32 yspd;
 
-    // TODO: fix disgusting code (add difficulty levels)
+    // FIXME: disgusting code (add difficulty levels)
     const i32 speed_decider = rand() % 3;
 
     if (speed_decider == 0) {
@@ -1391,11 +1410,15 @@ void handle_args(i32 argc, char* argv[argc]) {
 }
 
 void init(void) {
+    SetTraceLogLevel(LOG_ERROR);
+    info("initializing beanbricks version " VERSION);
+
     load_config();
 
     // TEST DATA (will replace later)
     lb = leaderboard_new(NULL);
 
+    info("initializing raylib window (%dx%d)", cfg.win_width, cfg.win_height);
     InitWindow(WIN_WIDTH, WIN_HEIGHT, "beanbricks");
     SetTargetFPS((i32)(60 / SPEED));
     srand(time(NULL));
@@ -1414,6 +1437,7 @@ void deinit(void) {
     free_bricks();
     leaderboard_destroy(&lb);
     CloseWindow();
+    info("goodbye");
 }
 
 i32 main(i32 argc, char* argv[argc]) {

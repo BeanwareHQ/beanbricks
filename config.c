@@ -8,6 +8,9 @@
  *
  * INFO: A basic config system with cJSON.
  */
+
+// TODO: better errors
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <string.h>
@@ -185,7 +188,7 @@ Config config_from_json_cstr(const char* str) {
         panic(
             "expected type number for field \"win_width\", got something else");
     }
-    res.win_width = (u16)theme_cjson->valueint;
+    res.win_width = (u16)win_width_cjson->valueint;
 
     cJSON* win_height_cjson =
         cJSON_GetObjectItemCaseSensitive(json, "winHeight");
