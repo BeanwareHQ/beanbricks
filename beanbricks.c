@@ -30,23 +30,6 @@
 
 #include "assets/themes.h"
 
-#define VERSION "0.2.0-pre"
-
-#define HELP                                                                   \
-    "\033[1mbeanbricks: a questionable breakout clone in C and "               \
-    "raylib.\033[0m\n\n"                                                       \
-    "Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.\n"                 \
-    "This program and all source code in the project directory including "     \
-    "this file is licensed under the MIT/Expat license; unless otherwise "     \
-    "stated. "                                                                 \
-    "View the full text of the license in the root of the project, or pass "   \
-    "--license.\n\n"                                                           \
-    "usage: beanbricks [flags]\n"                                              \
-    "running the program with no args will launch the game.\n\n"               \
-    "options:\n"                                                               \
-    "    --help: show this help screen\n"                                      \
-    "    --version: show the version of the program\n"
-
 #define WIN_WIDTH            (cfg.win_width)
 #define WIN_HEIGHT           (cfg.win_height)
 #define PADDLE_WIDTH         (cfg.paddle_width)
@@ -1440,6 +1423,12 @@ void handle_args(i32 argc, char* argv[argc]) {
         } else if (!strcmp(argv[0], "--help")) {
             printf(HELP);
             exit(EXIT_SUCCESS);
+        } else if (!strcmp(argv[0], "--license")) {
+            printf(LICENSE);
+            exit(EXIT_SUCCESS);
+        } else {
+            puts("no valid arguments");
+            exit(EXIT_SUCCESS);
         }
     }
 }
@@ -1450,6 +1439,7 @@ void init(void) {
     bricks = &gs->bricks;
     tss = &s.title_screen;
 
+    // actual setup
     SetTraceLogLevel(LOG_ERROR);
     info("initializing beanbricks version " VERSION);
 

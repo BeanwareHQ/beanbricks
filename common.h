@@ -111,4 +111,43 @@ typedef double f64;
         eprintf(S_END "\n");                                                   \
     }
 
+#define VERSION "0.2.0-pre"
+
+#define HELP                                                                   \
+    "\033[1mbeanbricks: a questionable breakout clone in C and "               \
+    "raylib.\033[0m\n\n"                                                       \
+    "Copyright (c) Eason Qin <eason@ezntek.com>, 2024-2025.\n"                 \
+    "This program is licensed under the MIT/Expat license. View the full "     \
+    "text of the\nlicense in the root of the project, or pass --license.\n\n"  \
+    "usage: beanbricks [flags]\n"                                              \
+    "running the program with no args will launch the game.\n\n"               \
+    "options:\n"                                                               \
+    "    --help: show this help screen\n"                                      \
+    "    --version: show the version of the program\n"                         \
+    "    --license: show the license of the program\n"
+
+#define LICENSE                                                                \
+    "Copyright (c) 2024-2025 Eason Qin (eason@ezntek.com)\n"                   \
+    "\n"                                                                       \
+    "Permission is hereby granted, free of charge, to any person\n"            \
+    "obtaining a copy of this software and associated documentation\n"         \
+    "files (the “Software”), to deal in the Software without\n"                \
+    "restriction, including without limitation the rights to use,\n"           \
+    "copy, modify, merge, publish, distribute, sublicense, and/or sell\n"      \
+    "copies of the Software, and to permit persons to whom the\n"              \
+    "Software is furnished to do so, subject to the following\n"               \
+    "conditions:\n"                                                            \
+    "\n"                                                                       \
+    "The above copyright notice and this permission notice shall be\n"         \
+    "included in all copies or substantial portions of the Software.\n"        \
+    "\n"                                                                       \
+    "THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,\n"        \
+    "EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES\n"        \
+    "OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND\n"               \
+    "NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT\n"            \
+    "HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,\n"           \
+    "WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING\n"           \
+    "FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR\n"          \
+    "OTHER DEALINGS IN THE SOFTWARE.\n"
+
 #endif
