@@ -19,10 +19,11 @@
 
 #include <raylib.h>
 
+#include "3rdparty/include/a_common.h"
+#include "3rdparty/include/a_string.h"
 #include "settings.h"
 
 #define RAYGUI_IMPLEMENTATION
-#include "3rdparty/include/asv.h"
 #include "3rdparty/include/raygui.h"
 
 #define VERSION "0.2.0-pre"
