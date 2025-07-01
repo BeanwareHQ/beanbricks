@@ -8,5 +8,6 @@
 	"layers":	5,
 	"brickWidth":	50,
 	"brickHeight":	12,
-	"ballRadius":	10
+	"ballRadius":	10,
+        "debug": false
 }

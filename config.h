@@ -77,6 +77,8 @@ typedef struct {
     u16 brick_height;
     // Ball Radius
     u16 ball_radius;
+    // Enable/Disable Debugging
+    bool debug;
 } Config;
 
 a_string config_to_json(const Config* cfg);
@@ -95,6 +97,7 @@ Config config_from_json_cstr(const char* str);
         .brick_width = 50,                                                     \
         .brick_height = 12,                                                    \
         .ball_radius = 10,                                                     \
+        .debug = false,                                                        \
     })
 
 #endif

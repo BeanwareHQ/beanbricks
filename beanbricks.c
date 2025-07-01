@@ -209,29 +209,30 @@ void draw_game_hud_left(void) {
     snprintf(txt, sizeof(txt), "Score: %d/%d", gs->score, maxscore);
     DrawText(txt, 20, 20, 20, TXT_PRIMARY);
 
-#ifdef DEBUG_INFO
-    Color col = LIGHTGRAY;
-    col.a = 30;
-    i32 debug_txt_width = MeasureText(txt, 20);
-    char debug_txt_buf[30] = {0};
-    const f64 avg_speed = (double)sqrt(gs->ball.xspd * gs->ball.xspd +
-                                       gs->ball.yspd * gs->ball.yspd);
-    snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Speed: %0.4f (%0.3f,%0.3f)",
-             avg_speed, gs->ball.xspd, gs->ball.yspd);
-    debug_txt_width = MeasureText(debug_txt_buf, 10);
-    DrawRectangle(0, 38, debug_txt_width + 30, 10, col);
-    DrawText(debug_txt_buf, 20, 40, 10, TXT_SECONDARY);
-    debug_txt_width = MeasureText(debug_txt_buf, 10);
-    snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Position: (%0.3f, %0.3f)",
-             gs->ball.x, gs->ball.y);
-    DrawRectangle(0, 48, debug_txt_width + 30, 10, col);
-    DrawText(debug_txt_buf, 20, 50, 10, TXT_SECONDARY);
-    debug_txt_width = MeasureText(debug_txt_buf, 10);
-    snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Paddle: (%0.3f, %0.3f)",
-             gs->paddle.rec.x, gs->paddle.rec.y);
-    DrawRectangle(0, 58, debug_txt_width + 30, 12, col);
-    DrawText(debug_txt_buf, 20, 60, 10, TXT_SECONDARY);
-#endif
+    if (cfg.debug) {
+        Color col = LIGHTGRAY;
+        col.a = 30;
+        i32 debug_txt_width = MeasureText(txt, 20);
+        char debug_txt_buf[30] = {0};
+        const f64 avg_speed = (double)sqrt(gs->ball.xspd * gs->ball.xspd +
+                                           gs->ball.yspd * gs->ball.yspd);
+        snprintf(debug_txt_buf, sizeof(debug_txt_buf),
+                 "Speed: %0.4f (%0.3f,%0.3f)", avg_speed, gs->ball.xspd,
+                 gs->ball.yspd);
+        debug_txt_width = MeasureText(debug_txt_buf, 10);
+        DrawRectangle(0, 38, debug_txt_width + 30, 10, col);
+        DrawText(debug_txt_buf, 20, 40, 10, TXT_SECONDARY);
+        debug_txt_width = MeasureText(debug_txt_buf, 10);
+        snprintf(debug_txt_buf, sizeof(debug_txt_buf),
+                 "Position: (%0.3f, %0.3f)", gs->ball.x, gs->ball.y);
+        DrawRectangle(0, 48, debug_txt_width + 30, 10, col);
+        DrawText(debug_txt_buf, 20, 50, 10, TXT_SECONDARY);
+        debug_txt_width = MeasureText(debug_txt_buf, 10);
+        snprintf(debug_txt_buf, sizeof(debug_txt_buf), "Paddle: (%0.3f, %0.3f)",
+                 gs->paddle.rec.x, gs->paddle.rec.y);
+        DrawRectangle(0, 58, debug_txt_width + 30, 12, col);
+        DrawText(debug_txt_buf, 20, 60, 10, TXT_SECONDARY);
+    }
 }
 
 void draw_game_hud_right(void) {

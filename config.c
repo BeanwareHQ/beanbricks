@@ -146,6 +146,12 @@ a_string config_to_json(const Config* cfg) {
     }
     cJSON_AddItemToObject(res, "ballRadius", ball_radius);
 
+    cJSON* debug = cJSON_CreateBool(cfg->debug);
+    if (debug == NULL) {
+        goto end;
+    }
+    cJSON_AddItemToObject(res, "debug", debug);
+
     res_str = cJSON_Print(res);
 
 end:
@@ -251,6 +257,13 @@ Config config_from_json_cstr(const char* str) {
               "else");
     }
     res.ball_radius = (u16)ball_radius_cjson->valueint;
+
+    cJSON* debug_cjson = cJSON_GetObjectItemCaseSensitive(json, "debug");
+    if (!cJSON_IsBool(debug_cjson)) {
+        panic("expected type number for field \"debug\", got something "
+              "else");
+    }
+    res.debug = (debug_cjson->valueint >= 1);
 
     cJSON_Delete(json);
     return res;
