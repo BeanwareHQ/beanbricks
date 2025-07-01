@@ -4,9 +4,9 @@ LIBS = $(shell pkg-config --cflags --libs raylib) -lm
 
 CJSON_VERSION=1.7.18
 
-OBJ = beanbricks.o config.o leaderboard.o
+OBJ = beanbricks.o config.o leaderboard.o game.o titlescreen.o settings.o
 3RDPARTY_OBJ = 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
-HEADERS = common.h config.h theme.h
+HEADERS = common.h config.h theme.h beanbricks.h game.h leaderboard.h titlescreen.h settings.h
 
 RELEASE_CFLAGS = -O2 -Wall -Wextra -pedantic $(INCLUDE) 
 DEBUG_CFLAGS = -O0 -g -Wall -Wextra -pedantic -fsanitize=address $(INCLUDE) 

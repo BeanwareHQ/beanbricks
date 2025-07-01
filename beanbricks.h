@@ -15,6 +15,7 @@
 #include <raylib.h>
 
 #include "common.h"
+#include "leaderboard.h"
 #include "theme.h"
 
 #define WIN_WIDTH            (cfg.win_width)
@@ -119,9 +120,12 @@ typedef struct {
     TitleScreenState title_screen;
     WinDeadGui win_dead_gui;
     Screen screen;
+    bool should_close;
 } State;
 
 Color color(i32);
+
+extern u32 maxscore;
 
 // The global config singleton (sorry no singleton pattern. this is C.)
 extern Config cfg;
@@ -141,5 +145,7 @@ extern Bricks* bricks;
 
 // Reference to s.title_screen
 extern TitleScreenState* tss;
+
+extern Leaderboard lb;
 
 #endif
