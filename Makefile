@@ -4,7 +4,7 @@ LIBS = $(shell pkg-config --cflags --libs raylib) -lm
 
 CJSON_VERSION=1.7.18
 
-OBJ = beanbricks.o config.o
+OBJ = beanbricks.o config.o leaderboard.o
 3RDPARTY_OBJ = 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
 HEADERS = common.h config.h theme.h
 

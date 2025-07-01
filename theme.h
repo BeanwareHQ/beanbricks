@@ -28,7 +28,7 @@ typedef struct {
 } ThemeSpec;
 
 // no macros thanks to compilers being finicky
-const ThemeSpec THEMESPEC_TBL[] = {
+static const ThemeSpec THEMESPEC_TBL[] = {
     [THEME_DEFAULT] = {.theme = THEME_DEFAULT,
                        .bg_color = 0xf5f5f5,
                        .dark_surface_color = 0xc3c3c3,
@@ -132,5 +132,4 @@ const ThemeSpec THEMESPEC_TBL[] = {
                                  [6] = 0xb4befe,
                              }    },
 };
-
 #endif

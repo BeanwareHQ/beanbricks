@@ -7,13 +7,13 @@
  * the full license text in the root of the project.
  */
 #define _POSIX_C_SOURCE 200809L
+#define RAYGUI_IMPLEMENTATION
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ctype.h>
 #include <math.h>
 #include <sys/cdefs.h>
 #include <time.h>
@@ -21,41 +21,15 @@
 #include <raylib.h>
 
 #include "3rdparty/include/a_string.h"
-#include "common.h"
-#include "config.h"
-#include "theme.h"
-
-#define RAYGUI_IMPLEMENTATION
 #include "3rdparty/include/raygui.h"
 
+#include "beanbricks.h"
+#include "common.h"
+#include "config.h"
+#include "leaderboard.h"
+#include "theme.h"
+
 #include "assets/themes.h"
-
-#define WIN_WIDTH            (cfg.win_width)
-#define WIN_HEIGHT           (cfg.win_height)
-#define PADDLE_WIDTH         (cfg.paddle_width)
-#define PADDLE_HEIGHT        (cfg.paddle_height)
-#define INITIAL_PADDLE_SPEED (cfg.initial_paddle_speed)
-#define LAYERS               (cfg.layers)
-#define BRICK_WIDTH          (cfg.brick_width)
-#define BRICK_HEIGHT         (cfg.brick_height)
-#define BALL_RADIUS          (cfg.ball_radius)
-
-#define BG_COLOR            (color(theme.bg_color))
-#define DARK_SURFACE_COLOR  (color(theme.dark_surface_color))
-#define LIGHT_SURFACE_COLOR (color(theme.light_surface_color))
-#define BALL_COLOR          (color(theme.ball_color))
-#define TXT_PRIMARY         (color(theme.txt_primary))
-#define TXT_SECONDARY       (color(theme.txt_secondary))
-#define BRICK_COLORS        (theme.brick_colors)
-
-// TODO: refactor
-#define LEADERBOARD_ENTRY_HEIGHT 30  // height of one leaderboard item
-#define LEADERBOARD_ENTRY_WIDTH  400 // width of one leaderboard item
-#define PADDLE_DEFAULT_X         (i32)((cfg.win_width / 2) - (cfg.paddle_width / 2))
-#define PADDLE_DEFAULT_Y         (i32)(cfg.win_height - 75)
-#define NUM_BRICKS               (i32)(WIN_WIDTH / (BRICK_WIDTH + 20))
-#define BRICK_PADDING            (i32)((WIN_WIDTH - NUM_BRICKS * (BRICK_WIDTH + 20)) / 2)
-#define SPEED                    1
 
 // color is a hex code, rgb
 Color color(i32 color) {
@@ -67,169 +41,30 @@ Color color(i32 color) {
     return (Color){r, g, b, 0xFF};
 }
 
-typedef struct {
-    f64 x;
-    f64 y;
-    f64 xspd;
-    f64 yspd;
-    Color color;
-} Ball;
-
-typedef struct {
-    Rectangle rec;
-    Color color;
-    i32 speed_offset;
-} Paddle;
-
-typedef struct {
-    Rectangle rec;
-    i32 value;
-    bool active;
-} Brick;
-
-typedef enum {
-    SCR_GAME = 0,
-    SCR_DEAD = 1,
-    SCR_WIN = 2,
-    SCR_TITLE = 3,
-    SCR_SETTINGS = 4,
-} Screen;
-
-typedef struct {
-    Rectangle quit_button;
-    Rectangle exit_overlay_yes_button;
-    Rectangle exit_overlay_no_button;
-    bool draw;
-} GameGui;
-
-typedef struct {
-    Rectangle title_button;
-    Rectangle restart_button;
-    Rectangle quit_button;
-} WinDeadGui; // GUI elements displayed on both the death and win screens
-
-typedef struct {
-    Rectangle start_button;
-    Rectangle quit_button;
-    Rectangle settings_button;
-} TitleScreenGui;
-
-typedef struct {
-    Brick* data;
-    bool* status;
-} Bricks;
-
-typedef struct {
-    Paddle paddle;
-    Ball ball;
-    GameGui gui;
-    u32 score;
-    u32 bricks_broken; // HUD
-    i32 paddle_speed;
-    bool paused;
-    bool exit_overlay;
-    Bricks bricks;
-} GameState;
-
-typedef struct {
-    TitleScreenGui gui;
-    i32 title_anim_stage;
-    bool title_anim_growing;
-} TitleScreenState;
-
-typedef struct {
-    GameState game;
-    TitleScreenState title_screen;
-    WinDeadGui win_dead_gui;
-    Screen screen;
-} State;
-
-typedef struct LeaderboardEntry {
-    a_string name;
-    time_t time;
-    u32 score;
-    u32 total_score;
-    u32 rows;
-
-    // internal use data
-    bool _hovered;
-
-    struct LeaderboardEntry* next; // owned on the heap
-} LeaderboardEntry;
-
-typedef struct {
-    FILE* fp; // null if not loaded from file
-    LeaderboardEntry* head;
-} Leaderboard;
-
 bool should_close = false;
-static u32 maxscore;
+u32 maxscore;
 
 // The global config singleton (sorry no singleton pattern. this is C.)
-static Config cfg;
+Config cfg;
 
 // The global theme spec
-static ThemeSpec theme;
+ThemeSpec theme;
 
 // The global game state (sorry rustaceans)
-static State s;
+State s;
 
 /* TCC DOES NOT LIKE DECLARATIONS HERE*/
 // Reference to s.game
-static GameState* gs;
+GameState* gs;
 
 // Reference to s.game.bricks
-static Bricks* bricks;
+Bricks* bricks;
 
 // Reference to s.title_screen
-static TitleScreenState* tss;
+TitleScreenState* tss;
 
 // the leaderboard
-static Leaderboard lb = {0};
-
-/**
- * Creates a new leaderboard.
- *
- * @param file the filename the leaderboard should be read from. NULL = not
- * reading from file
- * @return a new leaderboard with all entries loaded in. head may be null if the
- * file is empty.
- *
- */
-Leaderboard leaderboard_new(const char* file);
-
-/**
- * Saves a leaderboard to `fp` and closes it if `fp` is not NULL.
- *
- * @param lb the leaderboard to be closed.
- *
- */
-void leaderboard_close(Leaderboard* lb);
-
-/**
- * Destroys a leaderboard. This will not save and close the file pointer. Please
- * call `leaderboard_close()` first.
- *
- * @param lb the leaderboard to be destroyed.
- *
- */
-void leaderboard_destroy(Leaderboard* lb);
-void leaderboard_print(Leaderboard* lb);
-void leaderboard_draw(Leaderboard* lb);
-void leaderboard_update(Leaderboard* lb);
-LeaderboardEntry* leaderboard_end(Leaderboard* lb);
-usize leaderboard_length(Leaderboard* lb);
-void leaderboard_add_entry(Leaderboard* lb, LeaderboardEntry* entry);
-
-// ownership of the a_string will be taken
-LeaderboardEntry* leaderboard_entry_new(a_string name, time_t time, u32 score,
-                                        u32 total_score, u32 rows);
-LeaderboardEntry* leaderboard_entry_from_line(const char* line);
-void leaderboard_entry_destroy(LeaderboardEntry* e);
-void leaderboard_entry_print(LeaderboardEntry* e);
-void leaderboard_entry_draw(LeaderboardEntry* e, usize index, i32 y);
-void leaderboard_entry_draw_tooltip(LeaderboardEntry* e);
-void leaderboard_entry_update(LeaderboardEntry* e);
+Leaderboard lb = {0};
 
 // get an offset for the ball when bouncing on certain surfaces.
 i32 get_bounce_offset(const Ball* ball);
@@ -272,340 +107,6 @@ void reset_all(void);
 
 void init(void);
 void deinit(void);
-
-Leaderboard leaderboard_new(const char* file) {
-    if (file != NULL)
-        panic("not implemented");
-
-    // not written as (Leaderboard){0}; for clarity
-    return (Leaderboard){
-        .fp = NULL,
-        .head = NULL,
-    };
-}
-
-void leaderboard_destroy(Leaderboard* lb) {
-    if (lb->fp != NULL)
-        panic("not implemented");
-
-    LeaderboardEntry* curr = lb->head;
-    while (curr != NULL) {
-        LeaderboardEntry* next = curr->next;
-        leaderboard_entry_destroy(curr);
-        curr = next;
-    }
-
-    *lb = (Leaderboard){0};
-}
-
-void leaderboard_print(Leaderboard* lb) {
-    LeaderboardEntry* curr = lb->head;
-    usize index = 0;
-
-    while (curr != NULL) {
-        eprintf("%zu | ", index);
-        leaderboard_entry_print(curr);
-        curr = curr->next;
-        index++;
-    }
-}
-void leaderboard_draw(Leaderboard* lb) {
-    LeaderboardEntry* curr = lb->head;
-    usize index = 0;
-    usize y = 350;
-    LeaderboardEntry* hovered = NULL;
-
-    if (curr == NULL) {
-        // leaderboard is empty
-
-        char* txt = "leaderboard empty... play a game to get started!";
-        i32 txtsz = 20;
-        i32 txt_width = MeasureText(txt, txtsz);
-        DrawText(txt, (i32)(WIN_WIDTH / 2 - txt_width / 2), y, txtsz,
-                 TXT_SECONDARY);
-        return;
-    }
-
-    while (index < 10 && curr != NULL) {
-        leaderboard_entry_draw(curr, index,
-                               y + index * LEADERBOARD_ENTRY_HEIGHT);
-        if (curr->_hovered)
-            hovered = curr;
-        curr = curr->next;
-        index++;
-    }
-
-    // handle tooltips
-    if (hovered != NULL) {
-        leaderboard_entry_draw_tooltip(hovered);
-    }
-}
-
-void leaderboard_update(Leaderboard* lb) {
-    LeaderboardEntry* curr = lb->head;
-    usize index = 0;
-    usize y = 350;
-    usize x = (WIN_WIDTH / 2) - (LEADERBOARD_ENTRY_WIDTH / 2);
-
-    Rectangle lb_entry_rec = {
-        .x = x,
-        .y = y,
-        .width = LEADERBOARD_ENTRY_WIDTH,
-        .height = LEADERBOARD_ENTRY_HEIGHT,
-    };
-
-    // this update function runs every frame, so mouse data does
-    // not change in the loop.
-
-    Vector2 mouse_pos = GetMousePosition();
-    Rectangle mouse_rec = {
-        .x = mouse_pos.x,
-        .y = mouse_pos.y,
-        .width = 1,
-        .height = 1,
-    };
-
-    while (index < 10 && curr != NULL) {
-        bool mouse_over_entry = CheckCollisionRecs(lb_entry_rec, mouse_rec);
-        // im a lazy piece of shit
-        if (mouse_over_entry && !curr->_hovered)
-            curr->_hovered = true;
-        else if (!mouse_over_entry && curr->_hovered)
-            curr->_hovered = false;
-
-        leaderboard_entry_update(curr);
-        curr = curr->next;
-        index++;
-        lb_entry_rec.y = y + index * LEADERBOARD_ENTRY_HEIGHT;
-    }
-}
-
-LeaderboardEntry* leaderboard_end(Leaderboard* lb) {
-    if (lb->head == NULL)
-        return NULL;
-
-    LeaderboardEntry* curr = NULL;
-    curr = lb->head;
-    while (curr->next != NULL)
-        curr = curr->next;
-    return curr;
-}
-usize leaderboard_length(Leaderboard* lb);
-
-void leaderboard_add_entry(Leaderboard* lb, LeaderboardEntry* entry) {
-
-    LeaderboardEntry* end = leaderboard_end(lb);
-    if (end == NULL) {
-        lb->head = entry;
-    } else {
-        end->next = entry;
-    }
-}
-
-LeaderboardEntry* leaderboard_entry_new(a_string name, time_t time, u32 score,
-                                        u32 total_score, u32 rows) {
-    LeaderboardEntry* res = calloc(1, sizeof(LeaderboardEntry));
-    check_alloc(res);
-    *res = (LeaderboardEntry){
-        .name = name,
-        .time = time,
-        .score = score,
-        .total_score = total_score,
-        .rows = rows,
-        .next = NULL,
-        ._hovered = false,
-    };
-
-    return res;
-}
-
-LeaderboardEntry* leaderboard_entry_from_line(const char* line) {
-    /*
-     * The line should look something like the following:
-     *
-     * NAME              TIME  SCORE TOTAL_SCORE ROWS
-     * "the user's name" 70    90    180         3
-     *
-     */
-
-    const usize line_len = strlen(line);
-    usize curr = 0;
-
-    if (line_len < 2)
-        return NULL;
-
-    // chop off all the garbage
-    while (line[curr] != '"')
-        curr++;
-
-    // find the end delim
-    usize name_begin = curr + 1;
-    while (line[curr] != '"')
-        curr++;
-
-    // now the end char is "
-    usize name_end = curr - 1;
-    usize name_len = name_end - name_begin;
-
-    a_string name_buf = a_string_with_capacity(name_len + 1);
-    a_string_copy_cstr(&name_buf, (char*)line + name_begin);
-
-    // chop off whitespaces
-    curr++; // skip past "
-    while (isspace(line[curr]))
-        curr++;
-
-    usize nums_len = strlen((char*)line + curr);
-    a_string nums = a_string_with_capacity(nums_len + 1);
-    a_string_copy_cstr(&nums, (char*)line + curr);
-
-    char* curr_tok = NULL;
-    char* strtol_end = NULL;
-
-    curr_tok = strtok(nums.data, " ");
-    if (curr_tok == NULL)
-        panic("expected time in line `%s`", line);
-
-    // parse time
-    time_t time = (time_t)strtol(curr_tok, &strtol_end, 10);
-    if (*strtol_end != '\0')
-        panic("couldnt parse line `%s` at position %zu", line, curr);
-
-    curr_tok = strtok(NULL, " ");
-    if (curr_tok == NULL)
-        panic("expected score in line `%s`", line);
-    // parse score
-    u32 score = strtol(curr_tok, &strtol_end, 10);
-    if (*strtol_end != '\0')
-        panic("couldnt parse line `%s` at position %zu", line, curr);
-
-    // parse total_score
-    if (curr_tok == NULL)
-        panic("expected total_score in line `%s`", line);
-    u32 total_score = strtol(curr_tok, &strtol_end, 10);
-    if (*strtol_end != '\0')
-        panic("couldnt parse line `%s` at position %zu", line, curr);
-
-    // parse rows
-    if (curr_tok == NULL)
-        panic("expected rows in line `%s`", line);
-    u32 rows = strtol(curr_tok, &strtol_end, 10);
-    if (*strtol_end != '\0')
-        panic("couldnt parse line `%s` at position %zu", line, curr);
-
-    LeaderboardEntry* res =
-        leaderboard_entry_new(name_buf, time, score, total_score, rows);
-
-    a_string_free(&nums);
-    a_string_free(&name_buf);
-
-    return res;
-}
-
-void leaderboard_entry_destroy(LeaderboardEntry* e) {
-    a_string_free(&e->name);
-    free(e);
-}
-
-void leaderboard_entry_print(LeaderboardEntry* e) {
-    eprintf("name: `%s`, time: %lu, score: %d, total_score: %d, rows: %d\n",
-            e->name.data, e->time, e->score, e->total_score, e->rows);
-}
-
-void leaderboard_entry_draw(LeaderboardEntry* e, usize index, i32 y) {
-    const i32 BEGIN = WIN_WIDTH / 2 - LEADERBOARD_ENTRY_WIDTH / 2;
-    const i32 RANKING_BOX_WIDTH = MeasureText("00", 20) + 10; // +padding
-
-    const Rectangle box = {
-        .x = BEGIN,
-        .y = y,
-        .width = LEADERBOARD_ENTRY_WIDTH,
-        .height = LEADERBOARD_ENTRY_HEIGHT,
-    };
-
-    const Rectangle ranking_rec = {
-        .x = BEGIN,
-        .y = y,
-        .width = RANKING_BOX_WIDTH,
-        .height = LEADERBOARD_ENTRY_HEIGHT, // 10 + 20 + 10
-    };
-
-    char buf[5] = {0};
-    snprintf(buf, sizeof(buf), "%02zu", index + 1);
-    const i32 RANKING_TEXT_WIDTH = MeasureText(buf, 20);
-
-    DrawRectangleRec(box, DARK_SURFACE_COLOR);
-    DrawRectangleRec(ranking_rec, LIGHT_SURFACE_COLOR);
-
-    DrawText(buf, BEGIN + (RANKING_BOX_WIDTH / 2 - RANKING_TEXT_WIDTH / 2),
-             y + 5, 20, TXT_PRIMARY);
-
-    DrawText(e->name.data, BEGIN + RANKING_BOX_WIDTH + 10, y + 5, 20,
-             TXT_SECONDARY);
-}
-
-void leaderboard_entry_draw_tooltip(LeaderboardEntry* e) {
-    Vector2 mouse_pos = GetMousePosition();
-
-    // rows:
-    // -----
-    //
-    // name: <name>
-    // score: <score>/<total_score>
-    // time: <time>
-    // rows: <rows>
-
-    char rows[4][50] = {0};
-    usize max_row_len = sizeof(rows[0]);
-
-    snprintf(rows[0], max_row_len, "name: %s", e->name.data);
-    snprintf(rows[1], max_row_len, "score: %d/%d", e->score, e->total_score);
-    snprintf(rows[2], max_row_len, "time: %d", (i32)e->time);
-    snprintf(rows[3], max_row_len, "rows: %d", e->rows);
-
-    // draw relative to the mouse position
-    i32 txt_x = mouse_pos.x + 7; // border + padding
-    i32 txt_y = mouse_pos.y + 7;
-
-    i32 max_width = MeasureText(rows[0], 20);
-    for (usize i = 0; i < LENGTH(rows); i++) {
-        i32 width = MeasureText(rows[i], 20);
-
-        if (width > max_width) {
-            max_width = width;
-        }
-    }
-
-    Rectangle bounds = {
-        .x = mouse_pos.x,
-        .y = mouse_pos.y,
-        .width = max_width + 14,                                // + 2*padding
-        .height = (txt_y + 35 + 25 * LENGTH(rows)) - txt_y + 7, // padding
-    };
-
-    Rectangle contents = bounds;
-    contents.x += 2;
-    contents.y += 2;
-    contents.width -= 4;
-    contents.height -= 4;
-
-    DrawRectangleRec(bounds, color(BRICK_COLORS[5]));
-    DrawRectangleRec(contents, DARK_SURFACE_COLOR);
-
-    DrawText("Stats", txt_x, txt_y, 30, TXT_PRIMARY);
-    txt_y += 35;
-
-    for (usize i = 0; i < LENGTH(rows); i++) {
-        DrawText(rows[i], txt_x, txt_y, 20, TXT_SECONDARY);
-        txt_y += 25;
-    }
-}
-
-void leaderboard_entry_update(LeaderboardEntry* e) {
-    // suppress warning
-    e = e;
-    return;
-}
 
 // game related functions
 
