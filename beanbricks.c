@@ -22,7 +22,6 @@
 #include <raylib.h>
 
 #include "3rdparty/include/a_string.h"
-#include "3rdparty/include/raygui.h"
 
 #include "beanbricks.h"
 #include "common.h"
