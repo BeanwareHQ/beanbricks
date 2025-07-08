@@ -1,5 +1,6 @@
+test*
+foo*
 3rdparty/*
-settings.h
 *.tar.gz
 beanbricks/
 beanbricks

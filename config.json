@@ -1,0 +1,13 @@
+{
+	"theme":	"catppuccin_macchiato",
+	"winWidth":	600,
+	"winHeight":	800,
+	"paddleWidth":	100,
+	"paddleHeight":	20,
+	"initialPaddleSpeed":	6,
+	"layers":	5,
+	"brickWidth":	50,
+	"brickHeight":	12,
+	"ballRadius":	10,
+        "debug": false
+}
