@@ -60,7 +60,7 @@ void leaderboard_close(Leaderboard* lb);
  * @param lb the leaderboard to be destroyed.
  *
  */
-void leaderboard_destroy(Leaderboard* lb);
+void leaderboard_deinit(Leaderboard* lb);
 void leaderboard_print(Leaderboard* lb);
 void leaderboard_draw(Leaderboard* lb);
 void leaderboard_update(Leaderboard* lb);
@@ -72,7 +72,7 @@ void leaderboard_add_entry(Leaderboard* lb, LeaderboardEntry* entry);
 LeaderboardEntry* leaderboard_entry_new(a_string name, time_t time, u32 score,
                                         u32 total_score, u32 rows);
 LeaderboardEntry* leaderboard_entry_from_line(const char* line);
-void leaderboard_entry_destroy(LeaderboardEntry* e);
+void leaderboard_entry_deinit(LeaderboardEntry* e);
 void leaderboard_entry_print(LeaderboardEntry* e);
 void leaderboard_entry_draw(LeaderboardEntry* e, usize index, i32 y);
 void leaderboard_entry_draw_tooltip(LeaderboardEntry* e);

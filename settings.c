@@ -9,23 +9,38 @@
  * INFO: settings screen
  */
 
+#include "settings.h"
 #include <raylib.h>
 
 #include "beanbricks.h"
-#include "common.h"
-#include "titlescreen.h"
+#include "title.h"
 
-void draw_settings(void) {
-    const char* txt = "nothing to see here...";
-    const i32 txt_width = MeasureText(txt, 20);
-    const i32 txt_x = WIN_WIDTH / 2 - txt_width / 2;
-    const i32 txt_y = WIN_HEIGHT / 2 - 10;
-    DrawText(txt, txt_x, txt_y, 20, TXT_PRIMARY);
-}
+void s_settings_gui_draw(SettingsState* s) { title_draw(&s->gui.title); }
 
-void update_settings(void) {
-    if (IsKeyPressed(KEY_Q)) {
-        reset_titlescreen();
-        s.screen = SCR_TITLE;
+void s_settings_draw(SettingsState* s) { s_settings_gui_draw(s); }
+
+void s_settings_update(SettingsState* s) {
+    if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
+        switch_screen(SCR_TITLE);
     }
 }
+
+SettingsGui s_settings_gui_new(void) {
+    return (SettingsGui){.title = title_new_centered(
+                             20, astr("nothing to see here..."), TXT_PRIMARY)};
+}
+
+Screen s_settings_new(void) {
+    SettingsState s = (SettingsState){
+        .gui = s_settings_gui_new(),
+    };
+
+    Screen res = {
+        .variant = SCR_SETTINGS,
+        .data.settings = s,
+    };
+
+    return res;
+}
+
+void s_settings_deinit(SettingsState* s) { title_deinit(&s->gui.title); }

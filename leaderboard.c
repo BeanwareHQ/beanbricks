@@ -29,14 +29,14 @@ Leaderboard leaderboard_new(const char* file) {
     };
 }
 
-void leaderboard_destroy(Leaderboard* lb) {
+void leaderboard_deinit(Leaderboard* lb) {
     if (lb->fp != NULL)
         panic("not implemented");
 
     LeaderboardEntry* curr = lb->head;
     while (curr != NULL) {
         LeaderboardEntry* next = curr->next;
-        leaderboard_entry_destroy(curr);
+        leaderboard_entry_deinit(curr);
         curr = next;
     }
 
@@ -247,9 +247,9 @@ LeaderboardEntry* leaderboard_entry_from_line(const char* line) {
     return res;
 }
 
-void leaderboard_entry_destroy(LeaderboardEntry* e) {
+void leaderboard_entry_deinit(LeaderboardEntry* e) {
     a_string_free(&e->name);
-    free(e);
+    // free(e);
 }
 
 void leaderboard_entry_print(LeaderboardEntry* e) {

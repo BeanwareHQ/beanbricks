@@ -6,8 +6,8 @@ TARGET ?= debug
 
 CJSON_VERSION=1.7.18
 
-SRC = beanbricks.c config.c leaderboard.c game.c titlescreen.c settings.c text.c
-OBJ = beanbricks.o config.o leaderboard.o game.o titlescreen.o settings.o text.o
+SRC = beanbricks.c config.c leaderboard.c game.c titlescreen.c settings.c title.c
+OBJ = beanbricks.o config.o leaderboard.o game.o titlescreen.o settings.o title.o
 3RDPARTY_OBJ = 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
 HEADERS = common.h config.h theme.h beanbricks.h game.h leaderboard.h titlescreen.h settings.h
 TARBALLFILES = Makefile LICENSE.md README.md 3rdparty assets $(SRC) $(HEADERS)

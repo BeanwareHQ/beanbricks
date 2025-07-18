@@ -13,38 +13,41 @@
 #define _GAME_H
 
 #include "beanbricks.h"
-#include "common.h"
 #include <raylib.h>
 
-// Populates the bricks.
-void s_game_bricks_init(void);
-void s_game_bricks_make(void);
-void s_game_bricks_deinit(void);
-void s_game_draw_bricks(void);
-void s_game_draw_hud_left(void);
-void s_game_draw_hud_right(void);
-void s_game_gui_draw(void);
-void s_game_draw(void);
+Bricks s_game_bricks_init(void);
+// populates and initializes if necessary.
+void s_game_bricks_populate(Bricks* b);
+void s_game_bricks_deinit(Bricks* b);
 
-void s_game_update_paddle(void);
-void s_game_update_ball(void);
-void s_game_update_bricks(void);
-void s_game_update(void);
+void s_game_draw_bricks(GameState* s);
+void s_game_draw_hud_left(GameState* s);
+void s_game_draw_hud_right(GameState* s);
+void s_game_gui_draw(GameState* s);
+void s_game_draw(GameState* s);
 
-void s_game_reset(void);
+void s_game_update_paddle(GameState* s);
+void s_game_update_ball(GameState* s);
+void s_game_update_bricks(GameState* s);
+void s_game_update(GameState* s);
+
+GameGui s_game_gui_new(void);
+Screen s_game_new(void);
+
+void s_game_deinit(GameState* s);
 
 DeadGui s_dead_gui_new(void);
 Screen s_dead_new(void);
-void s_dead_gui_draw(DeadScreenState* dss);
-void s_dead_draw(DeadScreenState* dss);
-void s_dead_update(DeadScreenState* dss);
-void s_dead_destroy(DeadScreenState* dss);
+void s_dead_gui_draw(DeadScreenState* s);
+void s_dead_draw(DeadScreenState* s);
+void s_dead_update(DeadScreenState* s);
+void s_dead_deinit(DeadScreenState* s);
 
 WinGui s_win_gui_new(void);
 Screen s_win_new(void);
 void s_win_gui_draw(WinScreenState* s);
 void s_win_draw(WinScreenState* s);
 void s_win_update(WinScreenState* s);
-void s_win_destroy(WinScreenState* s);
+void s_win_deinit(WinScreenState* s);
 
 #endif

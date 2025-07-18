@@ -62,10 +62,12 @@ typedef double f64;
 
 #define check_alloc(ptr)                                                       \
                                                                                \
-    if (ptr == NULL) {                                                         \
-        panic("allocation of `%s` failed", #ptr);                              \
-        perror("perror");                                                      \
-        exit(1);                                                               \
+    {                                                                          \
+        if (ptr == NULL) {                                                     \
+            panic("allocation of `%s` failed", #ptr);                          \
+            perror("perror");                                                  \
+            exit(1);                                                           \
+        }                                                                      \
     }
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__);

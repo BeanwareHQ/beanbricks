@@ -12,7 +12,14 @@
 #ifndef _SETTINGS_H
 #define _SETTINGS_H
 
-void draw_settings(void);
-void update_settings(void);
+#include "beanbricks.h"
+
+void s_settings_gui_draw(SettingsState* s);
+void s_settings_draw(SettingsState* s);
+void s_settings_update(SettingsState* s);
+
+SettingsGui s_settings_gui_new(void);
+Screen s_settings_new(void);
+void s_settings_deinit(SettingsState* s);
 
 #endif

@@ -16,17 +16,16 @@
 
 #include "beanbricks.h"
 #include "common.h"
-#include "game.h"
 #include "titlescreen.h"
 
-void titlescreen_draw(TitleScreenState* tss) {
+void s_title_draw(TitleScreenState* s) {
     const char* title = "Beanbricks";
     i32 title_txtsz;
 
-    if (tss->title_anim_stage == 0) {
+    if (s->title_anim_stage == 0) {
         title_txtsz = 90;
     } else {
-        title_txtsz = 90 + (i32)(tss->title_anim_stage / 5);
+        title_txtsz = 90 + (i32)(s->title_anim_stage / 5);
     }
 
     i32 title_width = MeasureText(title, title_txtsz);
@@ -46,58 +45,54 @@ void titlescreen_draw(TitleScreenState* tss) {
              10, TXT_SECONDARY);
     DrawText("version " VERSION, 20, 34, 10, TXT_SECONDARY);
 
-    titlescreen_draw_gui(tss);
-    leaderboard_draw(&lb);
+    s_title_gui_draw(s);
+    leaderboard_draw(&state.lb);
 }
 
-void titlescreen_draw_gui(TitleScreenState* tss) {
-    if (GuiButton(tss->gui.start_button,
+void s_title_gui_draw(TitleScreenState* s) {
+    if (GuiButton(s->gui.start_button,
                   GuiIconText(ICON_PLAYER_PLAY, "[P]lay"))) {
-        game_reset();
-        s.screen = SCR_GAME;
-    }
-
-    if (GuiButton(tss->gui.quit_button, GuiIconText(ICON_EXIT, "[Q]uit"))) {
-        s.should_close = true;
+        switch_screen(SCR_GAME);
         return;
     }
 
-    if (GuiButton(tss->gui.settings_button,
+    if (GuiButton(s->gui.quit_button, GuiIconText(ICON_EXIT, "[Q]uit"))) {
+        switch_screen(SCR_QUIT);
+        return;
+    }
+
+    if (GuiButton(s->gui.settings_button,
                   GuiIconText(ICON_GEAR, "[S]ettings"))) {
-        s.screen = SCR_SETTINGS;
+        switch_screen(SCR_SETTINGS);
+        return;
     }
 }
 
-void titlescreen_update(TitleScreenState* tss) {
+void s_title_update(TitleScreenState* s) {
     if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
-        s.should_close = true;
+        switch_screen(SCR_QUIT);
         return;
     }
 
     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_P)) {
-        game_reset();
-        s.screen = SCR_GAME;
+        switch_screen(SCR_GAME);
+        return;
     }
 
-    if (tss->title_anim_stage >= 60 || tss->title_anim_stage <= 0) {
-        tss->title_anim_growing = !tss->title_anim_growing;
+    if (s->title_anim_stage >= 60 || s->title_anim_stage <= 0) {
+        s->title_anim_growing = !s->title_anim_growing;
     }
 
-    if (tss->title_anim_growing) {
-        tss->title_anim_stage++;
+    if (s->title_anim_growing) {
+        s->title_anim_stage++;
     } else {
-        tss->title_anim_stage--;
+        s->title_anim_stage--;
     }
 
-    leaderboard_update(&lb);
+    leaderboard_update(&state.lb);
 }
 
-void titlescreen_reset(TitleScreenState* tss) {
-    *tss = (TitleScreenState){
-        .title_anim_stage = 1,
-        .title_anim_growing = true,
-    };
-
+TitleScreenGui s_title_gui_new(void) {
     const i32 NBUTTONS = 3;
     const i32 BUTTON_WIDTH = 120;
     const i32 BUTTONS_WIDTH =
@@ -107,7 +102,7 @@ void titlescreen_reset(TitleScreenState* tss) {
 
     const i32 TITLESCREEN_TEXT_Y = WIN_HEIGHT * 0.16; // check draw_titlescreen
 
-    tss->gui = (TitleScreenGui){
+    TitleScreenGui res = {
         .start_button =
             (Rectangle){
                         .x = BUTTONS_BEGIN,
@@ -129,4 +124,23 @@ void titlescreen_reset(TitleScreenState* tss) {
                         .height = 30,
                         }
     };
+    return res;
 }
+
+Screen s_title_new(void) {
+    TitleScreenState s = {
+        .title_anim_stage = 1,
+        .title_anim_growing = true,
+    };
+
+    s.gui = s_title_gui_new();
+
+    Screen res = {
+        .variant = SCR_TITLE,
+        .data.title = s,
+    };
+
+    return res;
+}
+
+void s_title_deinit(TitleScreenState* s) { return; }

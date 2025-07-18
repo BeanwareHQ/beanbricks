@@ -24,14 +24,14 @@ typedef struct {
     u16 width; // accessible only after initialization
     a_string str;
     Color col;
-} Text;
+} Title;
 
-Text text_new(u16 x, u16 y, u16 size, a_string str, Color col);
-Text text_new_hcentered(u16 y, u16 size, a_string str, Color col);
-Text text_new_vcentered(u16 x, u16 size, a_string str, Color col);
-Text text_new_centered(u16 size, a_string str, Color col);
+Title title_new(u16 x, u16 y, u16 size, a_string str, Color col);
+Title title_new_hcentered(u16 y, u16 size, a_string str, Color col);
+Title title_new_vcentered(u16 x, u16 size, a_string str, Color col);
+Title title_new_centered(u16 size, a_string str, Color col);
 
-void text_draw(Text* txt);
-void text_free(Text* txt);
+void title_draw(Title* txt);
+void title_deinit(Title* txt);
 
 #endif

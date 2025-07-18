@@ -6,7 +6,6 @@
  * This source code form is wholly licensed under the MIT/Expat license. View
  * the full license text in the root of the project.
  */
-#include "titlescreen.h"
 #define _POSIX_C_SOURCE 200809L
 #define RAYGUI_IMPLEMENTATION
 
@@ -26,6 +25,7 @@
 #include "beanbricks.h"
 #include "common.h"
 #include "theme.h"
+#include "titlescreen.h"
 
 #include "config.h"
 #include "game.h"
@@ -33,6 +33,26 @@
 #include "settings.h"
 
 #include "assets/themes.h"
+
+// FIXME: refactor into game state instead
+u32 maxscore;
+
+// The global config singleton (sorry no singleton pattern. this is C.)
+Config cfg;
+
+// The global game state
+State state;
+
+// aliases for ease-of-life
+static Screen* screen;
+
+void load_config(void);
+void load_theme(void);
+void draw(void);
+void update(void);
+void reset_all(void);
+void init(void);
+void deinit(void);
 
 // color is a hex code, rgb
 Color color(i32 color) {
@@ -44,40 +64,53 @@ Color color(i32 color) {
     return (Color){r, g, b, 0xFF};
 }
 
-// FIXME: refactor into game state instead
-u32 maxscore;
+static void deinit_current_screen(void) {
+    switch (screen->variant) {
+        case SCR_GAME: {
+            s_game_deinit(&screen->data.game);
+        } break;
+        case SCR_DEAD: {
+            s_dead_deinit(&screen->data.dead);
+        } break;
+        case SCR_WIN: {
+            s_win_deinit(&screen->data.win);
+        } break;
+        case SCR_TITLE: {
+            s_title_deinit(&screen->data.title);
+        } break;
+        case SCR_SETTINGS: {
+            s_settings_deinit(&screen->data.settings);
+        } break;
+        default:
+            break;
+    }
+}
 
-// The global config singleton (sorry no singleton pattern. this is C.)
-Config cfg;
-
-// The global theme spec
-ThemeSpec theme;
-
-// The global game state (sorry rustaceans)
-State s;
-
-/* TCC DOES NOT LIKE DECLARATIONS HERE*/
-// Reference to s.game
-GameState* gs;
-
-// Reference to s.game.bricks
-Bricks* bricks;
-
-// Reference to s.title_screen
-TitleScreenState* tss;
-
-// the leaderboard
-Leaderboard lb;
-
-void load_config(void);
-void load_theme(void);
-void draw(void);
-void update(void);
-void reset_all(void);
-void init(void);
-void deinit(void);
-
-// game related functions
+void switch_screen(ScreenVariant scr) {
+    deinit_current_screen();
+    switch (scr) {
+        case SCR_GAME: {
+            *screen = s_game_new();
+        } break;
+        case SCR_DEAD: {
+            *screen = s_dead_new();
+        } break;
+        case SCR_WIN: {
+            *screen = s_win_new();
+        } break;
+        case SCR_TITLE: {
+            *screen = s_title_new();
+        } break;
+        case SCR_SETTINGS: {
+            *screen = s_settings_new();
+        } break;
+        case SCR_QUIT: {
+            screen->variant = SCR_QUIT;
+        } break;
+        default:
+            break;
+    }
+}
 
 void load_config(void) {
     // FIXME: shitcode
@@ -92,9 +125,9 @@ void load_config(void) {
 
 void load_theme(void) {
     // TODO: dynamic theme application
-    theme = THEMESPEC_TBL[cfg.theme];
+    state.theme = THEMESPEC_TBL[cfg.theme];
     // FIXME: refactor into function pointer table
-    switch (theme.theme) {
+    switch (state.theme.theme) {
         case THEME_CTP_LATTE: {
             GuiLoadStyleCatppuccinLatteSapphire();
         } break;
@@ -113,56 +146,48 @@ void load_theme(void) {
 }
 
 void draw(void) {
-    switch (s.screen.variant) {
+    switch (screen->variant) {
         case SCR_GAME: {
-            s_game_draw();
+            s_game_draw(&screen->data.game);
         } break;
         case SCR_DEAD: {
-            s_dead_draw();
+            s_dead_draw(&screen->data.dead);
         } break;
         case SCR_WIN: {
-            s_win_draw();
+            s_win_draw(&screen->data.win);
         } break;
         case SCR_TITLE: {
-            titlescreen_draw(&s.screen.data.title);
+            s_title_draw(&screen->data.title);
         } break;
         case SCR_SETTINGS: {
-            draw_settings();
+            s_settings_draw(&screen->data.settings);
         } break;
+        default:
+            break;
     }
 }
 
 void update(void) {
     // FIXME: refactor into function pointer table
-    switch (s.screen.variant) {
+    switch (screen->variant) {
         case SCR_GAME: {
-            s_game_update();
+            s_game_update(&screen->data.game);
         } break;
         case SCR_DEAD: {
-            s_dead_update();
+            s_dead_update(&screen->data.dead);
         } break;
         case SCR_WIN: {
-            s_win_update();
+            s_win_update(&screen->data.win);
         } break;
         case SCR_TITLE: {
-            titlescreen_update(&s.screen.data.title);
+            s_title_update(&screen->data.title);
         } break;
         case SCR_SETTINGS: {
-            update_settings();
+            s_settings_update(&screen->data.settings);
         } break;
+        default:
+            break;
     }
-}
-
-void reset_all(void) {
-    srand(time(NULL));
-
-    s = (State){
-        .screen = SCR_TITLE,
-    };
-
-    s_game_reset();
-    titlescreen_reset();
-    reset_win_or_dead_gui();
 }
 
 void handle_args(i32 argc, char* argv[argc]) {
@@ -188,18 +213,13 @@ void handle_args(i32 argc, char* argv[argc]) {
 
 void init(void) {
     // set up globals
-    gs = &s.game;
-    bricks = &gs->bricks;
-    tss = &s.title_screen;
+    screen = &state.screen;
 
     // actual setup
     SetTraceLogLevel(LOG_ERROR);
     info("initializing beanbricks version " VERSION);
 
     load_config();
-
-    // TEST DATA (will replace later)
-    lb = leaderboard_new(NULL);
 
     info("initializing raylib window (%dx%d)", cfg.win_width, cfg.win_height);
     InitWindow(WIN_WIDTH, WIN_HEIGHT, "beanbricks");
@@ -211,14 +231,20 @@ void init(void) {
         maxscore += NUM_BRICKS * i;
     }
 
+    state = (State){
+        .screen.variant = SCR_NONE,
+    };
+
+    // TEST DATA (will replace later)
+    state.lb = leaderboard_new(NULL);
     load_theme();
 
-    reset_all();
+    srand(time(NULL));
+    switch_screen(SCR_TITLE);
 }
 
 void deinit(void) {
-    s_game_bricks_deinit();
-    leaderboard_destroy(&lb);
+    leaderboard_deinit(&state.lb);
     CloseWindow();
     info("goodbye");
 }
@@ -227,11 +253,12 @@ i32 main(i32 argc, char* argv[argc]) {
     handle_args(argc, argv);
     init();
 
-    while (!s.should_close) {
-        if (WindowShouldClose() || s.should_close)
-            s.should_close = true;
-
+    while (!WindowShouldClose()) {
         update();
+
+        if (screen->variant == SCR_QUIT)
+            break;
+
         BeginDrawing();
         ClearBackground(BG_COLOR);
         draw();

@@ -14,50 +14,50 @@
 
 #include "beanbricks.h"
 #include "common.h"
-#include "text.h"
+#include "title.h"
 #include <raylib.h>
 
-Text text_new(u16 x, u16 y, u16 size, a_string str, Color col) {
+Title title_new(u16 x, u16 y, u16 size, a_string str, Color col) {
     if (!a_string_valid(&str)) {
-        panic("passed invalid string to text constructor");
+        panic("passed invalid string to title constructor");
     }
 
-    Text res = {x, y, size, .str = str, .col = col};
+    Title res = {x, y, size, .str = str, .col = col};
     res.width = MeasureText(str.data, size);
 
     return res;
 }
 
-Text text_new_hcentered(u16 y, u16 size, a_string str, Color col) {
+Title title_new_hcentered(u16 y, u16 size, a_string str, Color col) {
     if (!a_string_valid(&str)) {
-        panic("passed invalid string to text constructor");
+        panic("passed invalid string to title constructor");
     }
 
-    Text res = {.y = y, .size = size, .str = str, .col = col};
+    Title res = {.y = y, .size = size, .str = str, .col = col};
     res.width = MeasureText(str.data, size);
     res.x = (WIN_WIDTH / 2) - res.width / 2;
 
     return res;
 }
 
-Text text_new_vcentered(u16 x, u16 size, a_string str, Color col) {
+Title title_new_vcentered(u16 x, u16 size, a_string str, Color col) {
     if (!a_string_valid(&str)) {
-        panic("passed invalid string to text constructor");
+        panic("passed invalid string to title constructor");
     }
 
-    Text res = {.x = x, .size = size, .str = str, .col = col};
+    Title res = {.x = x, .size = size, .str = str, .col = col};
     res.width = MeasureText(str.data, size);
     res.y = (WIN_HEIGHT / 2) - size / 2;
 
     return res;
 }
 
-Text text_new_centered(u16 size, a_string str, Color col) {
+Title title_new_centered(u16 size, a_string str, Color col) {
     if (!a_string_valid(&str)) {
-        panic("passed invalid string to text constructor");
+        panic("passed invalid string to title constructor");
     }
 
-    Text res = {.size = size, .str = str, .col = col};
+    Title res = {.size = size, .str = str, .col = col};
     res.width = MeasureText(str.data, size);
     res.x = (WIN_WIDTH / 2) - res.width / 2;
     res.y = (WIN_HEIGHT / 2) - size / 2;
@@ -65,8 +65,8 @@ Text text_new_centered(u16 size, a_string str, Color col) {
     return res;
 }
 
-void text_draw(Text* txt) {
+void title_draw(Title* txt) {
     DrawText(txt->str.data, txt->x, txt->y, txt->size, txt->col);
 }
 
-void text_free(Text* txt) { a_string_free(&txt->str); }
+void title_deinit(Title* txt) { a_string_free(&txt->str); }

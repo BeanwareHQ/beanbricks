@@ -14,9 +14,13 @@
 
 #include "beanbricks.h"
 
-void titlescreen_draw_gui(TitleScreenState* gui);
-void titlescreen_draw(TitleScreenState* tss);
-void titlescreen_update(TitleScreenState* tss);
-void titlescreen_reset(TitleScreenState* tss);
+void s_title_gui_draw(TitleScreenState* gui);
+void s_title_draw(TitleScreenState* s);
+void s_title_update(TitleScreenState* s);
+
+TitleScreenGui s_title_gui_new(void);
+Screen s_title_new(void);
+
+void s_title_deinit(TitleScreenState* s);
 
 #endif
