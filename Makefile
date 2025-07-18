@@ -6,7 +6,8 @@ TARGET ?= debug
 
 CJSON_VERSION=1.7.18
 
-OBJ = beanbricks.o config.o leaderboard.o game.o titlescreen.o settings.o
+SRC = beanbricks.c config.c leaderboard.c game.c titlescreen.c settings.c text.c
+OBJ = beanbricks.o config.o leaderboard.o game.o titlescreen.o settings.o text.o
 3RDPARTY_OBJ = 3rdparty/asv/asv.o 3rdparty/cJSON/libcjson.a
 HEADERS = common.h config.h theme.h beanbricks.h game.h leaderboard.h titlescreen.h settings.h
 TARBALLFILES = Makefile LICENSE.md README.md 3rdparty assets $(SRC) $(HEADERS)
@@ -57,7 +58,9 @@ build: setup $(OBJ)
 targets:
 	@echo "supported targets: " $(TARGETS)
 
+# FIXME: actually implement config loading from paths
 setup: deps
+	[ -f config.json ] || cp defaultconfig.json config.json
 
 fetch_raygui:
 	mkdir -p 3rdparty/include
@@ -85,8 +88,8 @@ fetch_cjson:
 
 fetch_deps: fetch_raygui fetch_asv fetch_cjson
 
+# raygui needs no compilation
 deps: fetch_deps
-	# raygui needs no compilation
 	$(MAKE) -C 3rdparty/asv
 	$(MAKE) -C 3rdparty/cJSON
 		

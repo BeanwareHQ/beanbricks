@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <math.h>
 #include <sys/cdefs.h>
 #include <time.h>
 
@@ -94,7 +93,7 @@ void load_config(void) {
 void load_theme(void) {
     // TODO: dynamic theme application
     theme = THEMESPEC_TBL[cfg.theme];
-
+    // FIXME: refactor into function pointer table
     switch (theme.theme) {
         case THEME_CTP_LATTE: {
             GuiLoadStyleCatppuccinLatteSapphire();
@@ -114,18 +113,18 @@ void load_theme(void) {
 }
 
 void draw(void) {
-    switch (s.screen) {
+    switch (s.screen.variant) {
         case SCR_GAME: {
-            draw_game();
+            s_game_draw();
         } break;
         case SCR_DEAD: {
-            draw_dead();
+            s_dead_draw();
         } break;
         case SCR_WIN: {
-            draw_win();
+            s_win_draw();
         } break;
         case SCR_TITLE: {
-            draw_titlescreen();
+            titlescreen_draw(&s.screen.data.title);
         } break;
         case SCR_SETTINGS: {
             draw_settings();
@@ -134,20 +133,19 @@ void draw(void) {
 }
 
 void update(void) {
-    gs->gui.draw = (s.screen == SCR_GAME);
-
-    switch (s.screen) {
+    // FIXME: refactor into function pointer table
+    switch (s.screen.variant) {
         case SCR_GAME: {
-            update_game();
+            s_game_update();
         } break;
         case SCR_DEAD: {
-            update_dead();
+            s_dead_update();
         } break;
         case SCR_WIN: {
-            update_win();
+            s_win_update();
         } break;
         case SCR_TITLE: {
-            update_titlescreen();
+            titlescreen_update(&s.screen.data.title);
         } break;
         case SCR_SETTINGS: {
             update_settings();
@@ -162,8 +160,8 @@ void reset_all(void) {
         .screen = SCR_TITLE,
     };
 
-    reset_game();
-    reset_titlescreen();
+    s_game_reset();
+    titlescreen_reset();
     reset_win_or_dead_gui();
 }
 
@@ -219,7 +217,7 @@ void init(void) {
 }
 
 void deinit(void) {
-    free_bricks();
+    s_game_bricks_deinit();
     leaderboard_destroy(&lb);
     CloseWindow();
     info("goodbye");

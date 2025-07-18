@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "leaderboard.h"
+#include "text.h"
 #include "theme.h"
 
 #define WIN_WIDTH            (cfg.win_width)
@@ -65,32 +66,11 @@ typedef struct {
     bool active;
 } Brick;
 
-typedef enum {
-    SCR_GAME = 0,
-    SCR_DEAD = 1,
-    SCR_WIN = 2,
-    SCR_TITLE = 3,
-    SCR_SETTINGS = 4,
-} Screen;
-
 typedef struct {
     Rectangle quit_button;
     Rectangle exit_overlay_yes_button;
     Rectangle exit_overlay_no_button;
-    bool draw;
 } GameGui;
-
-typedef struct {
-    Rectangle title_button;
-    Rectangle restart_button;
-    Rectangle quit_button;
-} WinDeadGui; // GUI elements displayed on both the death and win screens
-
-typedef struct {
-    Rectangle start_button;
-    Rectangle quit_button;
-    Rectangle settings_button;
-} TitleScreenGui;
 
 typedef struct {
     Brick* data;
@@ -101,13 +81,45 @@ typedef struct {
     Paddle paddle;
     Ball ball;
     GameGui gui;
+    Bricks bricks;
     u32 score;
     u32 bricks_broken; // HUD
     i32 paddle_speed;
+    u32 elapsed_time;
     bool paused;
     bool exit_overlay;
-    Bricks bricks;
 } GameState;
+
+typedef struct {
+    Rectangle title_button;
+    Rectangle restart_button;
+    Rectangle quit_button;
+    Text title;
+} DeadGui;
+
+typedef struct {
+    Rectangle title_button;
+    Rectangle restart_button;
+    Rectangle quit_button;
+    Rectangle text_input;
+    Text title;
+} WinGui;
+
+typedef struct {
+    DeadGui gui;
+} DeadScreenState;
+
+typedef struct {
+    WinGui gui;
+    // lb entry currently being worked on
+    LeaderboardEntry entry;
+} WinScreenState;
+
+typedef struct {
+    Rectangle start_button;
+    Rectangle quit_button;
+    Rectangle settings_button;
+} TitleScreenGui;
 
 typedef struct {
     TitleScreenGui gui;
@@ -116,9 +128,31 @@ typedef struct {
 } TitleScreenState;
 
 typedef struct {
+    // TODO: implement
+} SettingsState;
+
+typedef enum {
+    SCR_GAME = 0,
+    SCR_DEAD = 1,
+    SCR_WIN = 2,
+    SCR_TITLE = 3,
+    SCR_SETTINGS = 4,
+} ScreenVariant;
+
+typedef union {
     GameState game;
-    TitleScreenState title_screen;
-    WinDeadGui win_dead_gui;
+    DeadScreenState dead;
+    WinScreenState win;
+    TitleScreenState title;
+    SettingsState settings;
+} ScreenData;
+
+typedef struct {
+    ScreenVariant variant;
+    ScreenData data;
+} Screen;
+
+typedef struct {
     Screen screen;
     bool should_close;
 } State;
@@ -142,9 +176,6 @@ extern GameState* gs;
 
 // Reference to s.game.bricks
 extern Bricks* bricks;
-
-// Reference to s.title_screen
-extern TitleScreenState* tss;
 
 extern Leaderboard lb;
 

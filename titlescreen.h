@@ -12,11 +12,11 @@
 #ifndef _TITLESCREEN_H
 #define _TITLESCREEN_H
 
-void draw_titlescreen(void);
-void draw_titlescreen_gui(void);
+#include "beanbricks.h"
 
-void update_titlescreen(void);
-
-void reset_titlescreen(void);
+void titlescreen_draw_gui(TitleScreenState* gui);
+void titlescreen_draw(TitleScreenState* tss);
+void titlescreen_update(TitleScreenState* tss);
+void titlescreen_reset(TitleScreenState* tss);
 
 #endif

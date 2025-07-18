@@ -16,34 +16,35 @@
 #include "common.h"
 #include <raylib.h>
 
-// get an offset for the ball when bouncing on certain surfaces.
-i32 get_bounce_offset(const Ball* ball);
-
 // Populates the bricks.
-void init_bricks(void);
-void make_bricks(void);
-void free_bricks(void);
+void s_game_bricks_init(void);
+void s_game_bricks_make(void);
+void s_game_bricks_deinit(void);
+void s_game_draw_bricks(void);
+void s_game_draw_hud_left(void);
+void s_game_draw_hud_right(void);
+void s_game_gui_draw(void);
+void s_game_draw(void);
 
-void draw_game_bricks(void);
-void draw_game_hud_left(void);
-void draw_game_hud_right(void);
-void draw_game_gui(void);
-void draw_game(void);
+void s_game_update_paddle(void);
+void s_game_update_ball(void);
+void s_game_update_bricks(void);
+void s_game_update(void);
 
-void update_game_paddle(void);
-void update_game_ball(void);
-void update_game_bricks(void);
-void update_game(void);
+void s_game_reset(void);
 
-void reset_game(void);
+DeadGui s_dead_gui_new(void);
+Screen s_dead_new(void);
+void s_dead_gui_draw(DeadScreenState* dss);
+void s_dead_draw(DeadScreenState* dss);
+void s_dead_update(DeadScreenState* dss);
+void s_dead_destroy(DeadScreenState* dss);
 
-void draw_win_or_dead_gui(void);
-void draw_dead(void);
-void draw_win(void);
-
-void update_dead(void);
-void update_win(void);
-
-void reset_win_or_dead_gui(void);
+WinGui s_win_gui_new(void);
+Screen s_win_new(void);
+void s_win_gui_draw(WinScreenState* s);
+void s_win_draw(WinScreenState* s);
+void s_win_update(WinScreenState* s);
+void s_win_destroy(WinScreenState* s);
 
 #endif

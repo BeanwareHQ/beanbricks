@@ -9,5 +9,5 @@
 	"brickWidth":	50,
 	"brickHeight":	12,
 	"ballRadius":	10,
-        "debug": true
+        "debug": false
 }

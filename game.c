@@ -10,16 +10,19 @@
  */
 
 #include <math.h>
+#include <raylib.h>
 #include <string.h>
 
+#include "3rdparty/include/a_string.h"
 #include "beanbricks.h"
 #include "common.h"
 #include "game.h"
 
 #include "3rdparty/include/raygui.h"
+#include "text.h"
 #include "titlescreen.h"
 
-i32 get_bounce_offset(const Ball* ball) {
+static i32 get_bounce_offset(const Ball* ball) {
     f64 avg = (f64)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd));
     f64 max = fabs(avg) / 5;
     f64 min = -max;
@@ -29,7 +32,7 @@ i32 get_bounce_offset(const Ball* ball) {
     return result + 0.2;
 }
 
-void init_bricks(void) {
+void s_game_bricks_init(void) {
     usize nmemb = NUM_BRICKS * LAYERS;
     bricks->data = calloc(nmemb, sizeof(Brick));
     check_alloc(bricks->data);
@@ -37,9 +40,9 @@ void init_bricks(void) {
     check_alloc(bricks->status);
 }
 
-void make_bricks(void) {
+void s_game_bricks_make(void) {
     if (bricks->data == NULL) {
-        init_bricks();
+        s_game_bricks_init();
     } else {
         memset(bricks->data, 0, NUM_BRICKS * LAYERS * sizeof(Brick));
         memset(bricks->status, 0, NUM_BRICKS * LAYERS * sizeof(bool));
@@ -62,12 +65,12 @@ void make_bricks(void) {
     }
 }
 
-void free_bricks(void) {
+void s_game_bricks_deinit(void) {
     free(bricks->data);
     free(bricks->status);
 }
 
-void draw_game_bricks(void) {
+void s_game_draw_bricks(void) {
     for (usize y = 0; y < LAYERS; y++) {
         // suppress -Wsign-compare
         for (usize x = 0; x < (usize)NUM_BRICKS; x++) {
@@ -80,7 +83,7 @@ void draw_game_bricks(void) {
     }
 }
 
-void draw_game_hud_left(void) {
+void s_game_draw_hud_left(void) {
     char txt[20] = {0};
     snprintf(txt, sizeof(txt), "Score: %d/%d", gs->score, maxscore);
     DrawText(txt, 20, 20, 20, TXT_PRIMARY);
@@ -111,13 +114,13 @@ void draw_game_hud_left(void) {
     }
 }
 
-void draw_game_hud_right(void) {
+void s_game_draw_hud_right(void) {
     char buf[10] = {0};
 
     const i32 BAR_WIDTH = 150;
     i32 BAR_X = WIN_WIDTH - BAR_WIDTH - 20;
 
-    if (gs->gui.draw) {
+    if (!gs->paused || s.screen != SCR_GAME) {
         BAR_X -= gs->gui.quit_button.width;
         BAR_X -= 10;
     }
@@ -166,18 +169,18 @@ void draw_game_hud_right(void) {
     DrawText(buf, BAR_X - TEXT_WIDTH - 10, 20, 20, TXT_PRIMARY);
 }
 
-void draw_game_gui(void) {
+void s_game_gui_draw(void) {
     if (GuiButton(gs->gui.quit_button, GuiIconText(ICON_EXIT, "Quit"))) {
         gs->exit_overlay = true;
     }
 }
 
-void draw_game(void) {
+void s_game_draw(void) {
     DrawRectangleRec(gs->paddle.rec, gs->paddle.color);
     DrawCircle(gs->ball.x, gs->ball.y, BALL_RADIUS, BALL_COLOR);
-    draw_game_bricks();
-    draw_game_hud_left();
-    draw_game_hud_right();
+    s_game_draw_bricks();
+    s_game_draw_hud_left();
+    s_game_draw_hud_right();
 
     if (gs->paused) {
         Rectangle darken = (Rectangle){0, 0, WIN_WIDTH, WIN_HEIGHT};
@@ -206,8 +209,8 @@ void draw_game(void) {
         if (GuiButton(gs->gui.exit_overlay_yes_button,
                       GuiIconText(ICON_OK_TICK, "[Y]es"))) {
             s.screen = SCR_TITLE;
-            reset_titlescreen();
-            reset_game();
+            titlescreen_reset();
+            s_game_reset();
             return;
         }
 
@@ -223,57 +226,10 @@ void draw_game(void) {
     if (gs->exit_overlay || gs->paused)
         return;
 
-    draw_game_gui();
+    s_game_gui_draw();
 }
 
-void draw_win_or_dead_gui(void) {
-    if (GuiButton(s.win_dead_gui.restart_button,
-                  GuiIconText(ICON_REPEAT_FILL, "[R]estart"))) {
-        reset_game();
-        s.screen = SCR_GAME;
-    } else if (GuiButton(s.win_dead_gui.title_button,
-                         GuiIconText(ICON_HOUSE, "[T]itle Screen"))) {
-        reset_titlescreen();
-        s.screen = SCR_TITLE;
-    } else if (GuiButton(s.win_dead_gui.quit_button,
-                         GuiIconText(ICON_EXIT, "[Q]uit"))) {
-        s.should_close = true;
-    }
-}
-
-void draw_dead(void) {
-    const char* death_txt = "Game over!";
-    const i32 death_txtsz = 100;
-
-    i32 death_width = MeasureText(death_txt, death_txtsz);
-
-    i32 death_posx = (WIN_WIDTH / 2) - death_width / 2;
-    i32 death_posy = (WIN_HEIGHT / 2) - death_txtsz / 2;
-
-    DrawText(death_txt, death_posx, death_posy, death_txtsz, TXT_PRIMARY);
-
-    draw_game_hud_left();
-    draw_game_hud_right();
-    draw_win_or_dead_gui();
-}
-
-void draw_win(void) {
-    const char* win_txt = "You won!";
-    const i32 win_txtsz = 100;
-
-    i32 win_width = MeasureText(win_txt, win_txtsz);
-
-    i32 win_posx = (WIN_WIDTH / 2) - win_width / 2;
-    i32 win_posy = (WIN_HEIGHT / 2) - win_txtsz / 2;
-
-    DrawText(win_txt, win_posx, win_posy, win_txtsz, TXT_PRIMARY);
-
-    draw_game_hud_left();
-    draw_game_hud_right();
-    draw_win_or_dead_gui();
-}
-
-void update_game_paddle(void) {
+void s_game_update_paddle(void) {
     Paddle* paddle = &gs->paddle;
     Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
@@ -330,7 +286,7 @@ void update_game_paddle(void) {
     }
 }
 
-void update_game_ball(void) {
+void s_game_update_ball(void) {
     Ball* ball = &gs->ball;
 
     // ball update logic
@@ -383,7 +339,7 @@ void update_game_ball(void) {
     }
 }
 
-void update_game_bricks(void) {
+void s_game_update_bricks(void) {
     Ball* ball = &gs->ball;
     Vector2 ball_pos = (Vector2){ball->x, ball->y};
 
@@ -435,30 +391,11 @@ void update_game_bricks(void) {
     }
 }
 
-void update_dead(void) {
-    if (IsKeyPressed(KEY_R) || IsKeyPressed(KEY_ENTER) ||
-        IsKeyPressed(KEY_SPACE)) {
-        reset_game();
-        s.screen = SCR_GAME;
-    }
-
-    if (IsKeyPressed(KEY_T) || IsKeyPressed(KEY_ESCAPE)) {
-        reset_titlescreen();
-        s.screen = SCR_TITLE;
-    }
-
-    if (IsKeyPressed(KEY_Q)) {
-        s.should_close = true;
-    }
-}
-
-void update_win(void) {
-    update_dead(); // update tasks are identical anyway
-}
-
-void update_game(void) {
+void s_game_update(void) {
     Paddle* paddle = &gs->paddle;
     Ball* ball = &gs->ball;
+
+    gs->elapsed_time++;
 
     f64 paddle_speed_offset =
         (f64)(sqrt(ball->xspd * ball->xspd + ball->yspd * ball->yspd)) / 5;
@@ -471,18 +408,27 @@ void update_game(void) {
 
     if (gs->score >= maxscore) {
         s.screen = SCR_WIN;
+        u32 time = gs->elapsed_time / 60; // seconds
         LeaderboardEntry* e = leaderboard_entry_new(
-            astr("default name"), 0, gs->score, maxscore, LAYERS);
+            astr("default name"), time, gs->score, maxscore, LAYERS);
         leaderboard_add_entry(&lb, e);
         return;
     }
 
-    if (IsKeyPressed(KEY_K)) {
-        s.screen = SCR_DEAD;
-        LeaderboardEntry* e = leaderboard_entry_new(
-            astr("default name"), 0, gs->score, maxscore, LAYERS);
-        leaderboard_add_entry(&lb, e);
-        return;
+    if (cfg.debug) {
+        if (IsKeyPressed(KEY_K)) {
+            s.screen = SCR_DEAD;
+            return;
+        }
+
+        if (IsKeyPressed(KEY_W)) {
+            s.screen = SCR_WIN;
+            u32 time = gs->elapsed_time / 60; // seconds
+            LeaderboardEntry* e = leaderboard_entry_new(
+                astr("default name"), time, gs->score, maxscore, LAYERS);
+            leaderboard_add_entry(&lb, e);
+            return;
+        }
     }
 
     if (IsKeyPressed(KEY_SPACE)) {
@@ -505,8 +451,8 @@ void update_game(void) {
         if (IsKeyPressed(KEY_N)) {
             gs->exit_overlay = false; // back
         } else if (IsKeyPressed(KEY_Y)) {
-            reset_titlescreen();
-            reset_game();
+            titlescreen_reset();
+            s_game_reset();
             s.screen = SCR_TITLE;
             return;
         }
@@ -514,12 +460,12 @@ void update_game(void) {
         return;
     }
 
-    update_game_paddle();
-    update_game_ball();
-    update_game_bricks();
+    s_game_update_paddle();
+    s_game_update_ball();
+    s_game_update_bricks();
 }
 
-void reset_game(void) {
+void s_game_reset(void) {
     i32 xspd;
     i32 yspd;
 
@@ -542,7 +488,7 @@ void reset_game(void) {
     }
 
     // FIXME: dont free and immediately realloc
-    free_bricks();
+    s_game_bricks_deinit();
 
     *gs = (GameState){
         .paddle =
@@ -585,15 +531,15 @@ void reset_game(void) {
                                    .height = 30}
     };
 
-    make_bricks();
+    s_game_bricks_make();
 }
 
-void reset_win_or_dead_gui(void) {
+DeadGui s_dead_gui_new(void) {
     const i32 BUTTON_WIDTH = 120;
     const i32 BUTTONS_WIDTH = 3 * BUTTON_WIDTH + 20; // + 2*padding
     const i32 BUTTONS_BEGIN = (i32)(WIN_WIDTH / 2 - BUTTONS_WIDTH / 2);
 
-    s.win_dead_gui = (WinDeadGui){
+    return (DeadGui){
         .restart_button = (Rectangle){.x = BUTTONS_BEGIN,
                                       .y = WIN_HEIGHT - 40,
                                       .width = BUTTON_WIDTH,
@@ -606,5 +552,130 @@ void reset_win_or_dead_gui(void) {
                                       .y = WIN_HEIGHT - 40,
                                       .width = BUTTON_WIDTH,
                                       .height = 30},
+        .title = text_new_centered(90, astr("Game Over!"), TXT_PRIMARY),
     };
 }
+
+Screen s_dead_new(void) {
+    Screen res = {
+        .variant = SCR_DEAD,
+    };
+
+    res.data.dead = (DeadScreenState){
+        .gui = s_dead_gui_new(),
+    };
+
+    return res;
+}
+
+void s_dead_gui_draw(DeadScreenState* dss) {
+    bool should_restart = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_R) ||
+                          GuiButton(dss->gui.restart_button,
+                                    GuiIconText(ICON_REPEAT_FILL, "[R]estart"));
+    bool should_go_titlescreen =
+        IsKeyPressed(KEY_T) || IsKeyPressed(KEY_ESCAPE) ||
+        GuiButton(dss->gui.title_button,
+                  GuiIconText(ICON_HOUSE, "[T]itle Screen"));
+    bool should_quit =
+        IsKeyPressed(KEY_Q) ||
+        GuiButton(dss->gui.quit_button, GuiIconText(ICON_EXIT, "[Q]uit"));
+
+    if (should_restart) {
+        s_game_reset();
+        s.screen = SCR_GAME;
+    } else if (should_go_titlescreen) {
+        titlescreen_reset();
+        s.screen = SCR_TITLE;
+    } else if (should_quit) {
+        s.should_close = true;
+    }
+}
+
+void s_dead_draw(DeadScreenState* dss) {
+    text_draw(&dss->gui.title);
+    s_dead_gui_draw(dss);
+}
+
+void s_dead_update(DeadScreenState* dss) {}
+
+void s_dead_destroy(DeadScreenState* dss) { text_free(&dss->gui.title); }
+
+WinGui s_win_gui_new(void) {
+    const i32 BUTTON_WIDTH = 120;
+    const i32 BUTTONS_WIDTH = 3 * BUTTON_WIDTH + 20; // + 2*padding
+    const i32 BUTTONS_BEGIN = (i32)(WIN_WIDTH / 2 - BUTTONS_WIDTH / 2);
+    const i32 TEXT_INPUT_WIDTH = 250;
+
+    Text title = text_new_hcentered((u16)(WIN_HEIGHT * 0.2), 90,
+                                    astr("You won!"), TXT_PRIMARY);
+
+    WinGui res = {
+        .restart_button = (Rectangle){.x = BUTTONS_BEGIN,
+                                      .y = WIN_HEIGHT - 40,
+                                      .width = BUTTON_WIDTH,
+                                      .height = 30 },
+        .title_button = (Rectangle){.x = BUTTONS_BEGIN + BUTTON_WIDTH + 10,
+                                      .y = WIN_HEIGHT - 40,
+                                      .width = BUTTON_WIDTH,
+                                      .height = 30 },
+        .quit_button = (Rectangle){.x = BUTTONS_BEGIN + 2 * BUTTON_WIDTH + 20,
+                                      .y = WIN_HEIGHT - 40,
+                                      .width = BUTTON_WIDTH,
+                                      .height = 30 },
+        .text_input = (Rectangle){.x = (i32)(TEXT_INPUT_WIDTH / 2),
+                                      .y = title.y + title.size + 10,
+                                      .width = TEXT_INPUT_WIDTH,
+                                      .height = 250}
+    };
+}
+
+Screen s_win_new(void) {
+    Screen res = {
+        .variant = SCR_WIN,
+    };
+
+    char* buf = calloc(255, 1);
+    check_alloc(buf);
+
+    res.data.win = (WinScreenState){
+        .gui = s_win_gui_new(),
+        .entry = buf,
+    };
+
+    return res;
+}
+
+void s_win_gui_draw(WinScreenState* wss) {
+    // name entry
+    const i32 TEXT_INPUT_WIDTH = 250;
+    /* FIXME: later
+    GuiTextInputBox(text_input_bounds, "Enter display name for leaderboard...",
+                    "leave empty to stay anonymous", "", , 255, NULL);
+    */
+
+    if (GuiButton(wss->gui.restart_button,
+                  GuiIconText(ICON_REPEAT_FILL, "[R]estart"))) {
+        s_game_reset();
+        s.screen = SCR_GAME;
+    } else if (GuiButton(wss->gui.title_button,
+                         GuiIconText(ICON_HOUSE, "[T]itle Screen"))) {
+        titlescreen_reset();
+        s.screen = SCR_TITLE;
+    } else if (GuiButton(wss->gui.quit_button,
+                         GuiIconText(ICON_EXIT, "[Q]uit"))) {
+        s.should_close = true;
+    }
+}
+
+void s_win_draw(WinScreenState* wss) {
+    text_draw(&wss->gui.title);
+
+    s_game_draw_hud_left();
+    s_game_draw_hud_right();
+
+    s_win_gui_draw(wss);
+}
+
+void s_win_update(WinScreenState* wss) {}
+
+void s_win_destroy(WinScreenState* wss) { text_free(&wss->gui.title); }

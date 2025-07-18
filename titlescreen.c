@@ -19,7 +19,7 @@
 #include "game.h"
 #include "titlescreen.h"
 
-void draw_titlescreen(void) {
+void titlescreen_draw(TitleScreenState* tss) {
     const char* title = "Beanbricks";
     i32 title_txtsz;
 
@@ -46,14 +46,14 @@ void draw_titlescreen(void) {
              10, TXT_SECONDARY);
     DrawText("version " VERSION, 20, 34, 10, TXT_SECONDARY);
 
-    draw_titlescreen_gui();
+    titlescreen_draw_gui(tss);
     leaderboard_draw(&lb);
 }
 
-void draw_titlescreen_gui(void) {
+void titlescreen_draw_gui(TitleScreenState* tss) {
     if (GuiButton(tss->gui.start_button,
                   GuiIconText(ICON_PLAYER_PLAY, "[P]lay"))) {
-        reset_game();
+        game_reset();
         s.screen = SCR_GAME;
     }
 
@@ -68,14 +68,14 @@ void draw_titlescreen_gui(void) {
     }
 }
 
-void update_titlescreen(void) {
+void titlescreen_update(TitleScreenState* tss) {
     if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
         s.should_close = true;
         return;
     }
 
     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_P)) {
-        reset_game();
+        game_reset();
         s.screen = SCR_GAME;
     }
 
@@ -92,7 +92,7 @@ void update_titlescreen(void) {
     leaderboard_update(&lb);
 }
 
-void reset_titlescreen(void) {
+void titlescreen_reset(TitleScreenState* tss) {
     *tss = (TitleScreenState){
         .title_anim_stage = 1,
         .title_anim_growing = true,
