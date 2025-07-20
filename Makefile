@@ -111,4 +111,6 @@ cleandeps:
 clean:
 	rm -rf beanbricks beanbricks.tar.gz beanbricks $(OBJ)
 
-.PHONY: clean cleandeps 
+cleanall: clean cleandeps
+
+.PHONY: clean cleandeps cleanall 
