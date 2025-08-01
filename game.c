@@ -89,7 +89,7 @@ void s_game_draw_bricks(GameState* s) {
 
 void s_game_draw_hud_left(GameState* s) {
     char txt[20] = {0};
-    snprintf(txt, sizeof(txt), "Score: %d/%d", s->score, maxscore);
+    snprintf(txt, sizeof(txt), "Score: %d/%d", s->score, state.maxscore);
     DrawText(txt, 20, 20, 20, TXT_PRIMARY);
 
     if (cfg.debug) {
@@ -409,7 +409,7 @@ void s_game_update(GameState* s) {
         return;
     }
 
-    if (s->score >= maxscore) {
+    if (s->score >= state.maxscore) {
         switch_screen(SCR_WIN);
         return;
     }

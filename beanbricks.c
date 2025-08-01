@@ -34,9 +34,6 @@
 
 #include "assets/themes.h"
 
-// FIXME: refactor into game state instead
-u32 maxscore;
-
 // The global config singleton (sorry no singleton pattern. this is C.)
 Config cfg;
 
@@ -227,13 +224,13 @@ void init(void) {
     srand(time(NULL));
     SetExitKey(KEY_NULL);
 
-    for (usize i = 1; i <= LAYERS; i++) {
-        maxscore += NUM_BRICKS * i;
-    }
-
     state = (State){
         .screen.variant = SCR_NONE,
     };
+
+    for (usize i = 1; i <= LAYERS; i++) {
+        state.maxscore += NUM_BRICKS * i;
+    }
 
     // TEST DATA (will replace later)
     state.lb = leaderboard_new(NULL);

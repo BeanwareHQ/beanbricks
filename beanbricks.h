@@ -163,14 +163,13 @@ typedef struct {
     ThemeSpec theme;
     Screen screen;
     Leaderboard lb;
+    u32 maxscore;
 } State;
 
 Color color(i32);
 
 // switches to a new screen gracefully
 void switch_screen(ScreenVariant scr);
-
-extern u32 maxscore;
 
 // The global config singleton (sorry no singleton pattern. this is C.)
 extern Config cfg;

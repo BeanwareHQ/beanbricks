@@ -1,0 +1,7 @@
+If:
+ PathMatch: .*.h
+CompileFlags:
+ Add: [-xc-header]
+
+CompileFlags:
+ Add: [-I./]
